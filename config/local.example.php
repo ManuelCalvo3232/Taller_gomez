@@ -1,4 +1,7 @@
-config/local.php
-api/node_modules/
-.env
-vendor/
+<?php
+return [
+    'host' => 'localhost',
+    'base' => 'taller_gomez',
+    'usuario' => 'user_example',
+    'clave' => 'password_example',
+];
