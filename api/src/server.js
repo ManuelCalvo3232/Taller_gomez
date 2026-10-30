@@ -2,14 +2,29 @@ import 'dotenv/config';
 import express from 'express';
 import turnosRouter from './routes/turnos.js';
 import trabajosRouter from './routes/trabajos.js';
+import dashboardRouter from './routes/dashboard.js';
 
 const app = express();
 
 // Lee el cuerpo de los pedidos en formato JSON
 app.use(express.json());
 
+   const ORIGENES_PERMITIDOS = ['http://localhost:8000'];
+
+   app.use((req, res, next) => {
+     const origen = req.get('Origin');
+     if (ORIGENES_PERMITIDOS.includes(origen)) {
+       res.set('Access-Control-Allow-Origin', origen);
+       res.set('Access-Control-Allow-Headers', 'Authorization, Content-Type');
+       res.set('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE');
+     }
+     if (req.method === 'OPTIONS') return res.sendStatus(204);
+     next();
+   });
+   
 app.use('/api/turnos', turnosRouter);
 app.use('/api/trabajos', trabajosRouter);
+app.use('/api/dashboard', dashboardRouter);
 
 // Ruta que no existe
 app.use((req, res) => {
