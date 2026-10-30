@@ -1,12 +1,14 @@
 <?php
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/auth/acceso.php';
+require __DIR__ . '/../src/auth/flash.php';
+require __DIR__ . '/../src/views/layout.php';
 
-// Solo clientes logueados pueden pedir turno
+// Solo clientes pueden pedir turno
 requerir_rol('cliente');
 
 $errores = [];
-$exito = false;
+$mensaje = flash_get();
 $valores = [
     'modelo' => '',
     'anio' => '',
@@ -36,7 +38,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         'options' => ['min_range' => 0],
     ]);
 
-    // Validaciones en el servidor
     if ($valores['modelo'] === '' || strlen($valores['modelo']) > 80) {
         $errores[] = 'El modelo es obligatorio (máximo 80 caracteres).';
     }
@@ -82,7 +83,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $idVehiculo = (int) $vehiculo['id_vehiculo'];
 
-                // Actualizamos los datos por si cambiaron (kilometraje, por ejemplo)
                 $stmt = $pdo->prepare("UPDATE vehiculos SET modelo = ?, anio = ?, kilometros = ? WHERE id_vehiculo = ?");
                 $stmt->execute([$valores['modelo'], $anio, $km, $idVehiculo]);
             } else {
@@ -101,7 +101,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$idTurno]);
 
             $pdo->commit();
-            $exito = true;
+
+            // PRG: recargar no vuelve a pedir el turno
+            flash_set('Turno registrado. Te avisamos cuando el taller reciba el vehículo.');
+            header('Location: turno_nuevo.php');
+            exit;
         } catch (DomainException $e) {
             if ($pdo && $pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -121,41 +125,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+inicio_html('Pedir turno');
+mostrar_mensajes($mensaje, $errores);
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pedir turno - Taller Gómez</title>
-</head>
-<body>
   <h1>Pedir turno</h1>
 
-  <?php if ($exito): ?>
-    <p>Turno registrado. Te avisamos cuando el taller reciba el vehículo.</p>
-    <p><a href="panel.php">Volver al panel</a></p>
-  <?php else: ?>
-    <?php foreach ($errores as $error): ?>
-      <p style="color:red"><?= htmlspecialchars($error) ?></p>
-    <?php endforeach; ?>
+  <form method="POST" action="turno_nuevo.php">
+    <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
 
-    <form method="POST" action="turno_nuevo.php">
-      <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+    <h2>Vehículo</h2>
+    <label>Modelo <input type="text" name="modelo" maxlength="80" value="<?= htmlspecialchars($valores['modelo']) ?>" required></label><br>
+    <label>Año <input type="number" name="anio" min="1950" max="<?= date('Y') + 1 ?>" value="<?= htmlspecialchars($valores['anio']) ?>" required></label><br>
+    <label>Patente <input type="text" name="patente" maxlength="10" value="<?= htmlspecialchars($valores['patente']) ?>" required></label><br>
+    <label>Kilómetros <input type="number" name="kilometros" min="0" value="<?= htmlspecialchars($valores['kilometros']) ?>" required></label><br>
 
-      <h2>Vehículo</h2>
-      <label>Modelo <input type="text" name="modelo" maxlength="80" value="<?= htmlspecialchars($valores['modelo']) ?>" required></label><br>
-      <label>Año <input type="number" name="anio" min="1950" max="<?= date('Y') + 1 ?>" value="<?= htmlspecialchars($valores['anio']) ?>" required></label><br>
-      <label>Patente <input type="text" name="patente" maxlength="10" value="<?= htmlspecialchars($valores['patente']) ?>" required></label><br>
-      <label>Kilómetros <input type="number" name="kilometros" min="0" value="<?= htmlspecialchars($valores['kilometros']) ?>" required></label><br>
+    <h2>Turno</h2>
+    <label>Fecha <input type="date" name="fecha" min="<?= date('Y-m-d') ?>" value="<?= htmlspecialchars($valores['fecha']) ?>" required></label><br>
+    <label>Hora <input type="time" name="hora" value="<?= htmlspecialchars($valores['hora']) ?>" required></label><br>
+    <label>Motivo <input type="text" name="motivo" maxlength="255" value="<?= htmlspecialchars($valores['motivo']) ?>" required></label><br>
 
-      <h2>Turno</h2>
-      <label>Fecha <input type="date" name="fecha" min="<?= date('Y-m-d') ?>" value="<?= htmlspecialchars($valores['fecha']) ?>" required></label><br>
-      <label>Hora <input type="time" name="hora" value="<?= htmlspecialchars($valores['hora']) ?>" required></label><br>
-      <label>Motivo <input type="text" name="motivo" maxlength="255" value="<?= htmlspecialchars($valores['motivo']) ?>" required></label><br>
-
-      <button type="submit">Confirmar turno</button>
-    </form>
-  <?php endif; ?>
-</body>
-</html>
+    <button type="submit">Confirmar turno</button>
+  </form>
+<?php
+link_panel();
+fin_html();

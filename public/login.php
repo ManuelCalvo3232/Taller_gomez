@@ -1,6 +1,8 @@
 <?php
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/auth/csrf.php';
+require __DIR__ . '/../src/auth/flash.php';
+require __DIR__ . '/../src/views/layout.php';
 
 // La sesión ya se inicia dentro de csrf.php
 if (isset($_SESSION['usuario_id'])) {
@@ -10,6 +12,8 @@ if (isset($_SESSION['usuario_id'])) {
 
 $errores = [];
 $email = '';
+// Mensaje de la acción anterior (por ejemplo, "Cuenta creada")
+$mensaje = flash_get();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verificar();
@@ -28,6 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $usuario = $stmt->fetch();
 
             if ($usuario && password_verify($clave, $usuario['password_hash'])) {
+                // Cambiar el id de sesión evita la fijación de sesión
                 session_regenerate_id(true);
 
                 $_SESSION['usuario_id'] = $usuario['id_usuario'];
@@ -47,6 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit;
             }
 
+            // Mismo mensaje si el email no existe o la clave es incorrecta
             $errores[] = 'Email o clave incorrectos.';
         } catch (PDOException $e) {
             $errores[] = 'Error interno. Intentá de nuevo más tarde.';
@@ -54,20 +60,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
-?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Iniciar sesión - Taller Gómez</title>
-</head>
-<body>
-  <h1>Iniciar sesión</h1>
 
-  <?php foreach ($errores as $error): ?>
-    <p style="color:red"><?= htmlspecialchars($error) ?></p>
-  <?php endforeach; ?>
+inicio_html('Iniciar sesión');
+mostrar_mensajes($mensaje, $errores);
+?>
+  <h1>Iniciar sesión</h1>
 
   <form method="POST" action="login.php">
     <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
@@ -77,5 +74,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   </form>
 
   <p>¿No tenés cuenta? <a href="registro.php">Registrate</a></p>
-</body>
-</html>
+<?php
+fin_html();

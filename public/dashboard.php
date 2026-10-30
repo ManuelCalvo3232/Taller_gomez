@@ -1,15 +1,15 @@
 <?php
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/auth/acceso.php';
-
-$config = require __DIR__ . '/../config/local.php';
+require __DIR__ . '/../src/views/layout.php';
 
 // Solo el administrador ve el dashboard
 requerir_rol('admin');
 
+$config = require __DIR__ . '/../config/local.php';
 $pdo = conectar();
 
-// Lista de trabajos con los datos del pedido. $condicion es una constante interna, nunca viene del usuario
+// Lista de trabajos. $condicion es una constante interna, nunca viene del usuario
 function listarTrabajos(PDO $pdo, string $condicion): array
 {
     return $pdo->query(
@@ -30,12 +30,10 @@ function listarTrabajos(PDO $pdo, string $condicion): array
 
 $realizados = listarTrabajos($pdo, "t.estado = 'listo'");
 $activos = listarTrabajos($pdo, "t.estado NOT IN ('listo', 'rechazado')");
-
 $stock = $pdo->query("SELECT nombre, stock, precio FROM repuestos ORDER BY stock ASC")->fetchAll();
-
 $caja = $pdo->query("SELECT COALESCE(SUM(total), 0) FROM presupuestos WHERE estado = 'aprobado'")->fetchColumn();
 
-// Pintar una tabla de trabajos (se usa para realizados y activos)
+// Tabla de trabajos (se usa para activos y realizados)
 function tablaTrabajos(array $filas): void
 {
     if (empty($filas)) {
@@ -56,17 +54,13 @@ function tablaTrabajos(array $filas): void
     }
     echo '</table>';
 }
+
+// Metas que el script necesita: token de la sesión y URL de la API (viene de la configuración)
+$extraHead = '<meta name="api-token" content="' . htmlspecialchars($_SESSION['api_token'] ?? '') . '">'
+    . '<meta name="api-base" content="' . htmlspecialchars($config['api_url']) . '">';
+
+inicio_html('Dashboard', $extraHead);
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="api-token" content="<?= htmlspecialchars($_SESSION['api_token'] ?? '') ?>">
-  <meta name="api-base" content="<?= htmlspecialchars($config['api_url']) ?>">
-  <title>Dashboard - Taller Gómez</title>
-</head>
-<body>
   <h1>Dashboard</h1>
 
   <h2>Caja</h2>
@@ -93,10 +87,7 @@ function tablaTrabajos(array $filas): void
     <?php endforeach; ?>
   </table>
 
-  <p><a href="panel.php">Volver al panel</a></p>
-
   <script>
-    // La API corre en otro puerto: la URL base se define acá
     const API_BASE = document.querySelector('meta[name="api-base"]').content;
     const token = document.querySelector('meta[name="api-token"]').content;
     const contenedor = document.getElementById('insights');
@@ -111,7 +102,6 @@ function tablaTrabajos(array $filas): void
       .then((datos) => {
         contenedor.textContent = '';
 
-        // Facturación mensual: barras proporcionales al mes de mayor monto
         const titulo1 = document.createElement('h3');
         titulo1.textContent = 'Facturación por mes';
         contenedor.appendChild(titulo1);
@@ -126,7 +116,6 @@ function tablaTrabajos(array $filas): void
           contenedor.appendChild(barra);
         });
 
-        // Trabajos por mecánico
         const titulo2 = document.createElement('h3');
         titulo2.textContent = 'Trabajos realizados por mecánico';
         contenedor.appendChild(titulo2);
@@ -141,5 +130,7 @@ function tablaTrabajos(array $filas): void
         contenedor.textContent = 'No se pudieron cargar los insights. Revisá que la API esté corriendo.';
       });
   </script>
-</body>
-</html>
+
+  <?php link_panel(); ?>
+<?php
+fin_html();

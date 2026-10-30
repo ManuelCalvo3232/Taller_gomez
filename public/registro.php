@@ -1,9 +1,10 @@
 <?php
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/auth/csrf.php';
+require __DIR__ . '/../src/auth/flash.php';
+require __DIR__ . '/../src/views/layout.php';
 
 $errores = [];
-$exito = false;
 $nombre = '';
 $email = '';
 
@@ -32,12 +33,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // La clave nunca se guarda en texto plano
             $hash = password_hash($clave, PASSWORD_DEFAULT);
 
-            // Sentencia preparada. El rol lo fija el servidor, no el formulario
-            $sql = "INSERT INTO usuarios (email, password_hash, nombre, rol) VALUES (?, ?, ?, 'cliente')";
-            $stmt = $pdo->prepare($sql);
+            // El rol lo fija el servidor, no el formulario
+            $stmt = $pdo->prepare("INSERT INTO usuarios (email, password_hash, nombre, rol) VALUES (?, ?, ?, 'cliente')");
             $stmt->execute([$email, $hash, $nombre]);
 
-            $exito = true;
+            // PRG: el mensaje se muestra en el login, y recargar no vuelve a crear la cuenta
+            flash_set('Cuenta creada. Ya podés iniciar sesión.');
+            header('Location: login.php');
+            exit;
         } catch (PDOException $e) {
             // SQLSTATE 23000 = violación de restricción (email duplicado por el UNIQUE)
             if ($e->getCode() === '23000') {
@@ -49,31 +52,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+inicio_html('Crear cuenta');
+mostrar_mensajes('', $errores);
 ?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Registro - Taller Gómez</title>
-</head>
-<body>
   <h1>Crear cuenta</h1>
 
-  <?php if ($exito): ?>
-    <p>Cuenta creada. <a href="login.php">Iniciar sesión</a></p>
-  <?php else: ?>
-    <?php foreach ($errores as $error): ?>
-      <p style="color:red"><?= htmlspecialchars($error) ?></p>
-    <?php endforeach; ?>
+  <form method="POST" action="registro.php">
+    <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+    <label>Nombre <input type="text" name="nombre" value="<?= htmlspecialchars($nombre) ?>" required></label><br>
+    <label>Email <input type="email" name="email" value="<?= htmlspecialchars($email) ?>" required></label><br>
+    <label>Clave (mínimo 8) <input type="password" name="clave" required></label><br>
+    <button type="submit">Registrarme</button>
+  </form>
 
-    <form method="POST" action="registro.php">
-      <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
-      <label>Nombre <input type="text" name="nombre" value="<?= htmlspecialchars($nombre) ?>" required></label><br>
-      <label>Email <input type="email" name="email" value="<?= htmlspecialchars($email) ?>" required></label><br>
-      <label>Clave (mínimo 8) <input type="password" name="clave" required></label><br>
-      <button type="submit">Registrarme</button>
-    </form>
-  <?php endif; ?>
-</body>
-</html>
+  <p>¿Ya tenés cuenta? <a href="login.php">Iniciar sesión</a></p>
+<?php
+fin_html();
