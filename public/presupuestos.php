@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/auth/acceso.php';
+require __DIR__ . '/../src/auth/flash.php';
 
 // Solo clientes ven esta página
 requerir_rol('cliente');
@@ -8,7 +9,8 @@ requerir_rol('cliente');
 $idCliente = (int) $_SESSION['usuario_id'];
 $pdo = conectar();
 $errores = [];
-$mensaje = '';
+// Mensaje de la acción anterior (si viene de un redirect)
+$mensaje = flash_get();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verificar();
@@ -89,6 +91,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $errores[] = 'Error interno. Intentá de nuevo más tarde.';
         error_log($e->getMessage());
+    }
+
+    // PRG: si todo salió bien, redirigir para que recargar no repita la acción
+    if ($mensaje !== '' && empty($errores)) {
+        flash_set($mensaje);
+        header('Location: presupuestos.php');
+        exit;
     }
 }
 

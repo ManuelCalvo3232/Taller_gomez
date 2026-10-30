@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/auth/acceso.php';
+require __DIR__ . '/../src/auth/flash.php';
 
 requerir_rol('mecanico');
 
@@ -37,7 +38,8 @@ if (!$trabajo) {
 }
 
 $errores = [];
-$mensaje = '';
+// Mensaje de la acción anterior (si viene de un redirect)
+$mensaje = flash_get();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verificar();
@@ -191,7 +193,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         error_log($e->getMessage());
     }
 
-    // Releer el trabajo por si cambió de estado
+    // PRG: si todo salió bien, redirigir para que recargar no repita la acción
+    if ($mensaje !== '' && empty($errores)) {
+        flash_set($mensaje);
+        header('Location: trabajo.php?id=' . $idTrabajo);
+        exit;
+    }
+
+    // Releer el trabajo por si cambió de estado (solo llega acá si hubo error)
     $trabajo = cargar_trabajo($pdo, $idTrabajo, $idMecanico);
 }
 
