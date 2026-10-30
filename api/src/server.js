@@ -9,7 +9,7 @@ const app = express();
 // Lee el cuerpo de los pedidos en formato JSON
 app.use(express.json());
 
-   const ORIGENES_PERMITIDOS = ['http://localhost:8000'];
+     const ORIGENES_PERMITIDOS = (process.env.CORS_ORIGENES ?? 'http://localhost:8000').split(',').map((o) => o.trim());
 
    app.use((req, res, next) => {
      const origen = req.get('Origin');
@@ -21,7 +21,7 @@ app.use(express.json());
      if (req.method === 'OPTIONS') return res.sendStatus(204);
      next();
    });
-   
+
 app.use('/api/turnos', turnosRouter);
 app.use('/api/trabajos', trabajosRouter);
 app.use('/api/dashboard', dashboardRouter);

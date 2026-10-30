@@ -2,6 +2,8 @@
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/auth/acceso.php';
 
+$config = require __DIR__ . '/../config/local.php';
+
 // Solo el administrador ve el dashboard
 requerir_rol('admin');
 
@@ -61,6 +63,7 @@ function tablaTrabajos(array $filas): void
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="api-token" content="<?= htmlspecialchars($_SESSION['api_token'] ?? '') ?>">
+  <meta name="api-base" content="<?= htmlspecialchars($config['api_url']) ?>">
   <title>Dashboard - Taller Gómez</title>
 </head>
 <body>
@@ -94,7 +97,7 @@ function tablaTrabajos(array $filas): void
 
   <script>
     // La API corre en otro puerto: la URL base se define acá
-    const API_BASE = 'http://localhost:3000';
+    const API_BASE = document.querySelector('meta[name="api-base"]').content;
     const token = document.querySelector('meta[name="api-token"]').content;
     const contenedor = document.getElementById('insights');
 

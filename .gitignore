@@ -3,3 +3,4 @@ api/node_modules/
 .env
 api/.env
 vendor/
+CORS_ORIGENES=http://localhost:8000

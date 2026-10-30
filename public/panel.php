@@ -38,6 +38,9 @@ $opciones = [
     <?php endforeach; ?>
   </ul>
 
-  <p><a href="logout.php">Cerrar sesión</a></p>
+    <form method="POST" action="logout.php">
+    <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+    <button type="submit">Cerrar sesión</button>
+  </form>
 </body>
 </html>
