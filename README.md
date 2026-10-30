@@ -3,6 +3,7 @@ Solucion web para taller gomez de la consultora Logos Tech
 
 ### Credenciales
 
+Contraseña general: admin1234
 | Cuenta | Rol | Acceso de demostración |
 | --- | --- | --- |
 | `cliente@cliente.com` | Cliente | Crear turno y ver presupuestos |
