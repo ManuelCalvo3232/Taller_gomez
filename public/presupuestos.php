@@ -2,6 +2,8 @@
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/auth/acceso.php';
 require __DIR__ . '/../src/auth/flash.php';
+require __DIR__ . '/../src/views/layout.php';
+require __DIR__ . '/../src/dominio/trabajos.php';
 
 // Solo clientes ven esta página
 requerir_rol('cliente');
@@ -9,7 +11,6 @@ requerir_rol('cliente');
 $idCliente = (int) $_SESSION['usuario_id'];
 $pdo = conectar();
 $errores = [];
-// Mensaje de la acción anterior (si viene de un redirect)
 $mensaje = flash_get();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -25,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // El presupuesto tiene que ser de un vehículo de este cliente y estar pendiente
         $stmt = $pdo->prepare(
-            "SELECT p.id_presupuesto, p.id_trabajo
+            "SELECT p.id_presupuesto, p.id_trabajo, t.estado
              FROM presupuestos p
              JOIN trabajos t ON t.id_trabajo = p.id_trabajo
              JOIN turnos tu ON tu.id_turno = t.id_turno
@@ -37,6 +38,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!$presupuesto) {
             throw new DomainException('El presupuesto no existe o ya fue respondido.');
+        }
+
+        // El nuevo estado del trabajo lo dicta el mapa de transiciones
+        $nuevoEstado = $accion === 'aprobar' ? 'aprobado' : 'rechazado';
+        if (!puede_pasar($presupuesto['estado'], $nuevoEstado)) {
+            throw new DomainException('Ese cambio no está permitido para este trabajo.');
         }
 
         $pdo->beginTransaction();
@@ -63,20 +70,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            $pdo->prepare("UPDATE presupuestos SET estado = 'aprobado', fecha_respuesta = NOW() WHERE id_presupuesto = ?")
-                ->execute([$idPresupuesto]);
-            $pdo->prepare("UPDATE trabajos SET estado = 'aprobado' WHERE id_trabajo = ?")
-                ->execute([$presupuesto['id_trabajo']]);
-
             $mensaje = 'Presupuesto aprobado. El taller ya puede empezar la reparación.';
         } else {
-            $pdo->prepare("UPDATE presupuestos SET estado = 'rechazado', fecha_respuesta = NOW() WHERE id_presupuesto = ?")
-                ->execute([$idPresupuesto]);
-            $pdo->prepare("UPDATE trabajos SET estado = 'rechazado' WHERE id_trabajo = ?")
-                ->execute([$presupuesto['id_trabajo']]);
-
             $mensaje = 'Presupuesto rechazado.';
         }
+
+        $pdo->prepare("UPDATE presupuestos SET estado = ?, fecha_respuesta = NOW() WHERE id_presupuesto = ?")
+            ->execute([$accion === 'aprobar' ? 'aprobado' : 'rechazado', $idPresupuesto]);
+        $pdo->prepare("UPDATE trabajos SET estado = ? WHERE id_trabajo = ?")
+            ->execute([$nuevoEstado, $presupuesto['id_trabajo']]);
 
         $pdo->commit();
 
@@ -123,23 +125,11 @@ foreach ($presupuestos as &$p) {
     $p['items'] = $stmtItems->fetchAll();
 }
 unset($p);
-?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mis presupuestos - Taller Gómez</title>
-</head>
-<body>
-  <h1>Mis presupuestos</h1>
 
-  <?php if ($mensaje): ?>
-    <p style="color:green"><?= htmlspecialchars($mensaje) ?></p>
-  <?php endif; ?>
-  <?php foreach ($errores as $error): ?>
-    <p style="color:red"><?= htmlspecialchars($error) ?></p>
-  <?php endforeach; ?>
+inicio_html('Mis presupuestos');
+mostrar_mensajes($mensaje, $errores);
+?>
+  <h1>Mis presupuestos</h1>
 
   <?php if (empty($presupuestos)): ?>
     <p>Todavía no tenés presupuestos.</p>
@@ -184,6 +174,6 @@ unset($p);
     </div>
   <?php endforeach; ?>
 
-  <p><a href="panel.php">Volver al panel</a></p>
-</body>
-</html>
+<?php
+link_panel();
+fin_html();

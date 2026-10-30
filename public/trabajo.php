@@ -2,6 +2,8 @@
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/auth/acceso.php';
 require __DIR__ . '/../src/auth/flash.php';
+require __DIR__ . '/../src/views/layout.php';
+require __DIR__ . '/../src/dominio/trabajos.php';
 
 requerir_rol('mecanico');
 
@@ -38,7 +40,6 @@ if (!$trabajo) {
 }
 
 $errores = [];
-// Mensaje de la acción anterior (si viene de un redirect)
 $mensaje = flash_get();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -53,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new DomainException('El diagnóstico es obligatorio (máximo 2000 caracteres).');
             }
 
-            // Insertar o actualizar: el UNIQUE de id_trabajo hace que haya un solo diagnóstico
+            // El UNIQUE de id_trabajo hace que haya un solo diagnóstico
             $stmt = $pdo->prepare(
                 "INSERT INTO diagnosticos (id_trabajo, descripcion) VALUES (?, ?)
                  ON DUPLICATE KEY UPDATE descripcion = VALUES(descripcion)"
@@ -62,14 +63,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mensaje = 'Diagnóstico guardado.';
 
         } elseif ($accion === 'presupuesto') {
-            // Requisito: tiene que existir diagnóstico
+            // Regla de negocio: solo se presupuesta con diagnóstico y en un estado que lo admita
+            if (!admite_presupuesto($trabajo['estado'])) {
+                throw new DomainException('Este trabajo ya no admite presupuestos nuevos.');
+            }
+
             $stmt = $pdo->prepare("SELECT 1 FROM diagnosticos WHERE id_trabajo = ?");
             $stmt->execute([$idTrabajo]);
             if (!$stmt->fetch()) {
                 throw new DomainException('Primero cargá el diagnóstico.');
-            }
-            if (!in_array($trabajo['estado'], ['en_diagnostico', 'presupuestado'], true)) {
-                throw new DomainException('Este trabajo ya no admite presupuestos nuevos.');
             }
 
             // Leer las filas del formulario (son arrays paralelos)
@@ -162,14 +164,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
             }
 
-            $pdo->prepare("UPDATE trabajos SET estado = 'presupuestado' WHERE id_trabajo = ?")
-                ->execute([$idTrabajo]);
+            // Pasa a "presupuestado" solo si todavía no lo estaba
+            if (puede_pasar($trabajo['estado'], 'presupuestado')) {
+                $pdo->prepare("UPDATE trabajos SET estado = 'presupuestado' WHERE id_trabajo = ?")
+                    ->execute([$idTrabajo]);
+            }
 
             $pdo->commit();
             $mensaje = 'Presupuesto cargado por $ ' . number_format($total, 2, ',', '.') . '.';
 
         } elseif ($accion === 'listo') {
-            if (!in_array($trabajo['estado'], ['aprobado', 'en_reparacion'], true)) {
+            // La transición la decide el mapa de estados, no esta página
+            if (!puede_pasar($trabajo['estado'], 'listo')) {
                 throw new DomainException('Solo se puede marcar listo un trabajo aprobado por el cliente.');
             }
             $pdo->prepare("UPDATE trabajos SET estado = 'listo' WHERE id_trabajo = ?")
@@ -200,7 +206,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    // Releer el trabajo por si cambió de estado (solo llega acá si hubo error)
     $trabajo = cargar_trabajo($pdo, $idTrabajo, $idMecanico);
 }
 
@@ -214,23 +219,11 @@ $stmt->execute([$idTrabajo]);
 $presupuestos = $stmt->fetchAll();
 
 $repuestos = $pdo->query("SELECT id_repuesto, nombre, precio FROM repuestos ORDER BY nombre")->fetchAll();
-?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trabajo #<?= (int) $idTrabajo ?> - Taller Gómez</title>
-</head>
-<body>
-  <h1>Trabajo #<?= (int) $idTrabajo ?></h1>
 
-  <?php if ($mensaje): ?>
-    <p style="color:green"><?= htmlspecialchars($mensaje) ?></p>
-  <?php endif; ?>
-  <?php foreach ($errores as $error): ?>
-    <p style="color:red"><?= htmlspecialchars($error) ?></p>
-  <?php endforeach; ?>
+inicio_html('Trabajo #' . $idTrabajo);
+mostrar_mensajes($mensaje, $errores);
+?>
+  <h1>Trabajo #<?= (int) $idTrabajo ?></h1>
 
   <h2>Vehículo y cliente</h2>
   <p>
@@ -253,7 +246,7 @@ $repuestos = $pdo->query("SELECT id_repuesto, nombre, precio FROM repuestos ORDE
     <button type="submit">Guardar diagnóstico</button>
   </form>
 
-  <?php if ($diagnostico): ?>
+  <?php if ($diagnostico && admite_presupuesto($trabajo['estado'])): ?>
   <h2>Presupuesto</h2>
   <form method="POST" action="trabajo.php?id=<?= (int) $idTrabajo ?>">
     <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
@@ -276,6 +269,7 @@ $repuestos = $pdo->query("SELECT id_repuesto, nombre, precio FROM repuestos ORDE
 
     <button type="submit">Cargar presupuesto</button>
   </form>
+  <?php endif; ?>
 
   <?php if (!empty($presupuestos)): ?>
     <h3>Presupuestos anteriores</h3>
@@ -287,9 +281,8 @@ $repuestos = $pdo->query("SELECT id_repuesto, nombre, precio FROM repuestos ORDE
       <?php endforeach; ?>
     </ul>
   <?php endif; ?>
-  <?php endif; ?>
 
-  <?php if (in_array($trabajo['estado'], ['aprobado', 'en_reparacion'], true)): ?>
+  <?php if (puede_pasar($trabajo['estado'], 'listo')): ?>
     <h2>Entrega</h2>
     <form method="POST" action="trabajo.php?id=<?= (int) $idTrabajo ?>">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
@@ -300,5 +293,5 @@ $repuestos = $pdo->query("SELECT id_repuesto, nombre, precio FROM repuestos ORDE
   <?php endif; ?>
 
   <p><a href="trabajos.php">Volver a trabajos</a></p>
-</body>
-</html>
+<?php
+fin_html();

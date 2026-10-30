@@ -2,16 +2,16 @@
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/auth/acceso.php';
 require __DIR__ . '/../src/auth/flash.php';
+require __DIR__ . '/../src/views/layout.php';
+require __DIR__ . '/../src/dominio/trabajos.php';
 
 // Solo mecánicos ven esta página
 requerir_rol('mecanico');
 
 $idMecanico = (int) $_SESSION['usuario_id'];
 $errores = [];
-// Mensaje de la acción anterior (si viene de un redirect)
 $mensaje = flash_get();
 
-// Procesar la asignación de un trabajo (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verificar();
 
@@ -22,13 +22,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo = conectar();
 
-            // La condición "id_mecanico IS NULL" evita que dos mecánicos tomen el mismo trabajo
+            // "id_mecanico IS NULL" evita que dos mecánicos tomen el mismo trabajo.
+            // La transición recibido -> en_diagnostico sale del mapa de estados
             $stmt = $pdo->prepare(
                 "UPDATE trabajos
-                 SET id_mecanico = ?, estado = 'en_diagnostico'
-                 WHERE id_trabajo = ? AND id_mecanico IS NULL AND estado = 'recibido'"
+                 SET id_mecanico = ?, estado = ?
+                 WHERE id_trabajo = ? AND id_mecanico IS NULL AND estado = ?"
             );
-            $stmt->execute([$idMecanico, $idTrabajo]);
+            $stmt->execute([$idMecanico, 'en_diagnostico', $idTrabajo, 'recibido']);
 
             if ($stmt->rowCount() === 1) {
                 $mensaje = 'Trabajo asignado. Ya podés cargar el diagnóstico.';
@@ -75,23 +76,11 @@ try {
 
 $sinAsignar = array_filter($trabajos, fn($t) => $t['id_mecanico'] === null);
 $misTrabajos = array_filter($trabajos, fn($t) => $t['id_mecanico'] !== null);
-?>
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Trabajos - Taller Gómez</title>
-</head>
-<body>
-  <h1>Trabajos</h1>
 
-  <?php if ($mensaje): ?>
-    <p style="color:green"><?= htmlspecialchars($mensaje) ?></p>
-  <?php endif; ?>
-  <?php foreach ($errores as $error): ?>
-    <p style="color:red"><?= htmlspecialchars($error) ?></p>
-  <?php endforeach; ?>
+inicio_html('Trabajos');
+mostrar_mensajes($mensaje, $errores);
+?>
+  <h1>Trabajos</h1>
 
   <h2>Sin asignar</h2>
   <?php if (empty($sinAsignar)): ?>
@@ -123,6 +112,6 @@ $misTrabajos = array_filter($trabajos, fn($t) => $t['id_mecanico'] !== null);
     </div>
   <?php endforeach; ?>
 
-  <p><a href="panel.php">Volver al panel</a></p>
-</body>
-</html>
+<?php
+link_panel();
+fin_html();
