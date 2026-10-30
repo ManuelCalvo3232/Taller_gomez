@@ -1,7 +1,19 @@
 <?php
 
-// Iniciar la sesión solo si todavía no está iniciada (evita el warning de doble session_start)
+// ¿La conexión es HTTPS? Directo, o detrás de un proxy como Traefik en Dokploy
+$esHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+
+// Cookie de sesión endurecida. Tiene que configurarse antes de session_start()
 if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.use_strict_mode', '1');
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path' => '/',
+        'secure' => $esHttps,      // solo se envía por HTTPS cuando está disponible
+        'httponly' => true,        // JavaScript no puede leerla
+        'samesite' => 'Lax',       // otros sitios no la mandan en POST cruzados
+    ]);
     session_start();
 }
 
