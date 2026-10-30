@@ -2,8 +2,8 @@
 
 function conectar(): PDO
 {
-    // 1. Leer la configuración
-    $config = require __DIR__ . '/../../config/local.php';
+    // 1. Leer la configuración (desde el entorno)
+    $config = require __DIR__ . '/../../config/config.php';
 
     // 2. Armar el DSN
     $dsn = "mysql:host={$config['host']};dbname={$config['base']};charset=utf8mb4";

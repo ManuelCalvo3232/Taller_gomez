@@ -4,6 +4,18 @@
 const MAX_INTENTOS_LOGIN = 5;
 const VENTANA_LOGIN_MINUTOS = 15;
 
+// IP real del cliente. Detrás de un proxy, la IP real viene en X-Forwarded-For.
+// Solo confiamos en ese encabezado si TRUST_PROXY=1, porque si no, cualquiera puede falsearlo.
+function ip_cliente(): string
+{
+    $config = require __DIR__ . '/../../config/config.php';
+
+    if ($config['trust_proxy'] && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+        return trim(explode(',', $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
+    }
+    return $_SERVER['REMOTE_ADDR'];
+}
+
 // ¿Esta IP superó el límite de fallos recientes?
 function login_bloqueado(PDO $pdo, string $ip): bool
 {

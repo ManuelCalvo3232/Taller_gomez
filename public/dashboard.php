@@ -6,7 +6,7 @@ require __DIR__ . '/../src/views/layout.php';
 // Solo el administrador ve el dashboard
 requerir_rol('admin');
 
-$config = require __DIR__ . '/../config/local.php';
+$config = require __DIR__ . '/../config/config.php';
 $pdo = conectar();
 
 // Lista de trabajos. $condicion es una constante interna, nunca viene del usuario

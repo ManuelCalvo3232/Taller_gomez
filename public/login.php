@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $email = trim($_POST['email'] ?? '');
     $clave = $_POST['clave'] ?? '';
-    $ip = $_SERVER['REMOTE_ADDR'];
+    $ip = ip_cliente();
 
     if ($email === '' || $clave === '') {
         $errores[] = 'Completá el email y la clave.';
