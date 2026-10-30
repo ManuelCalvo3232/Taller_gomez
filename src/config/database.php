@@ -11,7 +11,8 @@ function conectar(): PDO
     // 3. Crear la conexión con las opciones
     $pdo = new PDO($dsn, $config['usuario'], $config['clave'], [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, 
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC, 
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES => false, 
     ]);
 
     // 4. Devolver la conexión

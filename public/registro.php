@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../src/config/database.php';
+require __DIR__ . '/../src/auth/csrf.php';
 
 $errores = [];
 $exito = false;
@@ -7,6 +8,8 @@ $nombre = '';
 $email = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verificar();
+
     $nombre = trim($_POST['nombre'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $clave = $_POST['clave'] ?? '';
@@ -65,6 +68,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endforeach; ?>
 
     <form method="POST" action="registro.php">
+      <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
       <label>Nombre <input type="text" name="nombre" value="<?= htmlspecialchars($nombre) ?>" required></label><br>
       <label>Email <input type="email" name="email" value="<?= htmlspecialchars($email) ?>" required></label><br>
       <label>Clave (mínimo 8) <input type="password" name="clave" required></label><br>

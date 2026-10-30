@@ -1,10 +1,8 @@
 <?php
 require __DIR__ . '/../src/config/database.php';
+require __DIR__ . '/../src/auth/csrf.php';
 
-// Iniciar la sesión en cada request, antes de cualquier salida HTML
-session_start();
-
-// Si ya hay una sesión activa, no mostramos el login de nuevo
+// La sesión ya se inicia dentro de csrf.php
 if (isset($_SESSION['usuario_id'])) {
     header('Location: panel.php');
     exit;
@@ -14,6 +12,8 @@ $errores = [];
 $email = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    csrf_verificar();
+
     $email = trim($_POST['email'] ?? '');
     $clave = $_POST['clave'] ?? '';
 
@@ -28,10 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt->execute([$email]);
             $usuario = $stmt->fetch();
 
-            // Mismo mensaje si el email no existe o la clave es incorrecta,
-            // así no le revelamos a un atacante qué emails están registrados
+            // Mismo mensaje si el email no existe o la clave es incorrecta
             if ($usuario && password_verify($clave, $usuario['password_hash'])) {
-                // Cambiar el id de sesión evita que alguien robe una sesión previa
+                // Cambiar el id de sesión evita la fijación de sesión
                 session_regenerate_id(true);
 
                 $_SESSION['usuario_id'] = $usuario['id_usuario'];
@@ -65,6 +64,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <?php endforeach; ?>
 
   <form method="POST" action="login.php">
+    <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
     <label>Email <input type="email" name="email" value="<?= htmlspecialchars($email) ?>" required></label><br>
     <label>Clave <input type="password" name="clave" required></label><br>
     <button type="submit">Entrar</button>
