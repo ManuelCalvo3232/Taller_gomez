@@ -72,6 +72,7 @@ $misTrabajos = array_filter($trabajos, fn($t) => $t['id_mecanico'] !== null);
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="api-token" content="<?= htmlspecialchars($_SESSION['api_token'] ?? '') ?>">
   <title>Trabajos - Taller Gómez</title>
 </head>
 <body>
