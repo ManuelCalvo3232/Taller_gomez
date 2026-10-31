@@ -42,7 +42,7 @@ export function plantillaListo({ nombre, modelo, patente, idTrabajo }) {
   `);
 }
 
-export function plantillaPresupuesto({ nombre, modelo, patente, idTrabajo, idPresupuesto, total, items }) {
+export function plantillaPresupuesto({ nombre, modelo, patente, idTrabajo, idPresupuesto, total, items, urlAprobar }) {
   const filas = items.map((it) => `
         <tr>
           <td style="padding:8px; border-bottom:1px solid #EDEDED;">${escapar(it.descripcion)}</td>
@@ -68,13 +68,13 @@ export function plantillaPresupuesto({ nombre, modelo, patente, idTrabajo, idPre
         Total: ${pesos(total)}
       </p>
 
-      <a href="${escapar(appUrl)}/presupuestos.php"
+      <a href="${escapar(urlAprobar)}"
          style="display:block; text-align:center; background:#E63946; color:#FFFFFF; text-decoration:none; font-weight:700; padding:14px; border-radius:8px;">
         Revisar y aprobar
       </a>
 
       <p style="color:#8A8A8A; font-size:13px; margin:16px 0 0;">
-        Para aprobar o rechazar el presupuesto, ingresá con tu cuenta. Trabajo #${Number(idTrabajo)} · Presupuesto #${Number(idPresupuesto)}
+        El link vence en 7 días y solo se puede usar una vez. Trabajo #${Number(idTrabajo)} · Presupuesto #${Number(idPresupuesto)}
       </p>
   `);
 }
