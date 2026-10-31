@@ -1,217 +1,307 @@
 <?php
-require __DIR__ . '/../src/config/database.php';
+
+require __DIR__ . '/../src/auth/csrf.php';
 require __DIR__ . '/../src/auth/acceso.php';
 require __DIR__ . '/../src/auth/flash.php';
+require __DIR__ . '/../src/config/database.php';
+require __DIR__ . '/../src/dominio/vehiculos.php';
 require __DIR__ . '/../src/views/layout.php';
 
-// Solo clientes pueden pedir turno
 requerir_rol('cliente');
 
 $config = require __DIR__ . '/../config/config.php';
+$pdo = conectar();
 
+// Horarios de turno: cada 30 minutos entre 08:00 y 17:30
+$horarios = [];
+for ($min = 8 * 60; $min <= 17 * 60 + 30; $min += 30) {
+    $horarios[] = sprintf('%02d:%02d', intdiv($min, 60), $min % 60);
+}
+
+$anioMax = (int) date('Y') + 1;
 $errores = [];
-$mensaje = flash_get();
-$valores = [
-    'modelo' => '',
-    'anio' => '',
-    'patente' => '',
-    'kilometros' => '',
-    'fecha' => '',
-    'hora' => '',
-    'motivo' => '',
+$v = [
+    'tipo' => 'auto', 'patente' => '', 'marca' => '', 'modelo' => '', 'anio' => '',
+    'cilindrada' => '', 'kilometros' => '', 'fecha' => '', 'hora' => '', 'motivo' => '',
 ];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verificar();
 
-    foreach ($valores as $campo => $valor) {
-        $valores[$campo] = trim($_POST[$campo] ?? '');
+    foreach (array_keys($v) as $campo) {
+        $v[$campo] = trim((string) ($_POST[$campo] ?? ''));
     }
 
-    $patente = strtoupper(str_replace(' ', '', $valores['patente']));
+    $tipo = in_array($v['tipo'], TIPOS_VEHICULO, true) ? $v['tipo'] : 'auto';
+    $patente = normalizar_patente($v['patente']);
 
-    $anioMax = (int) date('Y') + 1;
-    $anio = filter_var($valores['anio'], FILTER_VALIDATE_INT, [
-        'options' => ['min_range' => 1950, 'max_range' => $anioMax],
-    ]);
-    $km = filter_var($valores['kilometros'], FILTER_VALIDATE_INT, [
-        'options' => ['min_range' => 0],
-    ]);
-
-    if ($valores['modelo'] === '' || strlen($valores['modelo']) > 80) {
-        $errores[] = 'El modelo es obligatorio (máximo 80 caracteres).';
+    // Para motos, marca y modelo se guardan juntos en "modelo" (ej: "Honda Wave")
+    if ($tipo === 'moto') {
+        if ($v['marca'] === '') {
+            $errores[] = 'Indicá la marca de la moto.';
+        }
+        $modelo = trim($v['marca'] . ' ' . $v['modelo']);
+        if ($v['modelo'] === '') {
+            $errores[] = 'Indicá el modelo de la moto.';
+        }
+    } else {
+        $modelo = $v['modelo'];
     }
+
+    if ($modelo === '' || mb_strlen($modelo) > 100) {
+        $errores[] = 'El modelo es obligatorio y puede tener hasta 100 caracteres.';
+    }
+
+    if (!patente_valida($tipo, $patente)) {
+        $errores[] = $tipo === 'moto'
+            ? 'La patente de la moto no es válida. Ejemplos: A123BCD o 123BCD.'
+            : 'La patente del auto no es válida. Ejemplos: AB123CD o ABC123.';
+    }
+
+    $anio = filter_var($v['anio'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1950, 'max_range' => $anioMax]]);
     if ($anio === false) {
-        $errores[] = "El año tiene que estar entre 1950 y $anioMax.";
+        $errores[] = "El año debe estar entre 1950 y $anioMax.";
     }
-    if (!preg_match('/^([A-Z]{3}\d{3}|[A-Z]{2}\d{3}[A-Z]{2})$/', $patente)) {
-        $errores[] = 'La patente no tiene un formato válido (ej: ABC123 o AB123CD).';
-    }
+
+    $km = filter_var($v['kilometros'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
     if ($km === false) {
-        $errores[] = 'Los kilómetros tienen que ser un número mayor o igual a cero.';
-    }
-    if ($valores['motivo'] === '' || strlen($valores['motivo']) > 255) {
-        $errores[] = 'El motivo es obligatorio (máximo 255 caracteres).';
+        $errores[] = 'Los kilómetros tienen que ser un número mayor o igual a 0.';
     }
 
-    // Fecha y hora: tiene que ser válida y futura. La hora sale de los botones de horarios libres
-    $fechaHora = DateTime::createFromFormat('Y-m-d H:i', $valores['fecha'] . ' ' . $valores['hora']);
-    if ($fechaHora === false) {
-        $errores[] = 'Elegí una fecha y un horario disponible.';
-    } elseif ($fechaHora <= new DateTime()) {
-        $errores[] = 'El turno tiene que ser en el futuro.';
+    $cilindrada = null;
+    if ($tipo === 'moto') {
+        $cilindrada = filter_var($v['cilindrada'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 50, 'max_range' => 3000]]);
+        if ($cilindrada === false) {
+            $errores[] = 'La cilindrada tiene que estar entre 50 y 3000 cc.';
+        }
     }
 
-    if (empty($errores)) {
-        $pdo = null;
+    if ($v['motivo'] === '' || mb_strlen($v['motivo']) > 255) {
+        $errores[] = 'Contanos el motivo (hasta 255 caracteres).';
+    }
+
+    $fecha = DateTime::createFromFormat('Y-m-d', $v['fecha']);
+    $fechaValida = $fecha !== false && $fecha->format('Y-m-d') === $v['fecha'];
+    if (!$fechaValida) {
+        $errores[] = 'Elegí una fecha válida.';
+    }
+
+    if (!in_array($v['hora'], $horarios, true)) {
+        $errores[] = 'Elegí un horario de la lista.';
+    }
+
+    $fechaHora = $fechaValida && in_array($v['hora'], $horarios, true)
+        ? $v['fecha'] . ' ' . $v['hora'] . ':00'
+        : null;
+
+    if ($fechaHora !== null && $fechaHora <= date('Y-m-d H:i:s')) {
+        $errores[] = 'Elegí un horario futuro.';
+    }
+
+    if (!$errores) {
         try {
-            $pdo = conectar();
             $pdo->beginTransaction();
 
-            $idCliente = (int) $_SESSION['usuario_id'];
+            // Si el cliente ya tiene ese vehículo, se actualizan sus datos
+            $stmt = $pdo->prepare('SELECT id_vehiculo FROM vehiculos WHERE patente = ? AND id_cliente = ?');
+            $stmt->execute([$patente, $_SESSION['usuario_id']]);
+            $idVehiculo = $stmt->fetchColumn();
 
-            $stmt = $pdo->prepare("SELECT id_vehiculo, id_cliente FROM vehiculos WHERE patente = ?");
-            $stmt->execute([$patente]);
-            $vehiculo = $stmt->fetch();
-
-            if ($vehiculo) {
-                if ((int) $vehiculo['id_cliente'] !== $idCliente) {
-                    throw new DomainException('Esa patente está registrada a nombre de otro cliente.');
-                }
-                $idVehiculo = (int) $vehiculo['id_vehiculo'];
-
-                $stmt = $pdo->prepare("UPDATE vehiculos SET modelo = ?, anio = ?, kilometros = ? WHERE id_vehiculo = ?");
-                $stmt->execute([$valores['modelo'], $anio, $km, $idVehiculo]);
+            if ($idVehiculo) {
+                $pdo->prepare(
+                    'UPDATE vehiculos SET tipo = ?, modelo = ?, anio = ?, kilometros = ?, cilindrada = ?
+                     WHERE id_vehiculo = ?'
+                )->execute([$tipo, $modelo, $anio, $km, $cilindrada, $idVehiculo]);
             } else {
-                $stmt = $pdo->prepare("INSERT INTO vehiculos (id_cliente, patente, modelo, anio, kilometros) VALUES (?, ?, ?, ?, ?)");
-                $stmt->execute([$idCliente, $patente, $valores['modelo'], $anio, $km]);
-                $idVehiculo = (int) $pdo->lastInsertId();
+                $pdo->prepare(
+                    'INSERT INTO vehiculos (id_cliente, patente, tipo, modelo, anio, kilometros, cilindrada)
+                     VALUES (?, ?, ?, ?, ?, ?, ?)'
+                )->execute([$_SESSION['usuario_id'], $patente, $tipo, $modelo, $anio, $km, $cilindrada]);
+                $idVehiculo = $pdo->lastInsertId();
             }
 
-            $stmt = $pdo->prepare("INSERT INTO turnos (id_vehiculo, fecha_hora, motivo) VALUES (?, ?, ?)");
-            $stmt->execute([$idVehiculo, $fechaHora->format('Y-m-d H:i:s'), $valores['motivo']]);
-            $idTurno = (int) $pdo->lastInsertId();
+            $pdo->prepare('INSERT INTO turnos (id_vehiculo, fecha_hora, motivo) VALUES (?, ?, ?)')
+                ->execute([$idVehiculo, $fechaHora, $v['motivo']]);
+            $idTurno = $pdo->lastInsertId();
 
-            $stmt = $pdo->prepare("INSERT INTO trabajos (id_turno, estado) VALUES (?, 'recibido')");
-            $stmt->execute([$idTurno]);
+            $pdo->prepare("INSERT INTO trabajos (id_turno, estado) VALUES (?, 'recibido')")
+                ->execute([$idTurno]);
 
             $pdo->commit();
 
-            flash_set('Turno registrado. Te avisamos cuando el taller reciba el vehículo.');
-            header('Location: turno_nuevo.php');
+            flash_set('Turno reservado. Te avisamos por mail cuando haya novedades.');
+            header('Location: panel.php');
             exit;
-        } catch (DomainException $e) {
-            if ($pdo && $pdo->inTransaction()) {
-                $pdo->rollBack();
-            }
-            $errores[] = $e->getMessage();
         } catch (PDOException $e) {
-            if ($pdo && $pdo->inTransaction()) {
+            if ($pdo->inTransaction()) {
                 $pdo->rollBack();
             }
             if ($e->getCode() === '23000') {
-                $errores[] = 'Ese horario ya está ocupado. Elegí otro.';
+                $errores[] = 'Ese horario ya está reservado o la patente figura con otro cliente. Elegí otro horario o consultá con el taller.';
             } else {
-                $errores[] = 'Error interno. Intentá de nuevo más tarde.';
-                error_log($e->getMessage());
+                error_log('turno_nuevo: ' . $e->getMessage());
+                $errores[] = 'Ocurrió un error al guardar el turno. Intentá de nuevo.';
             }
         }
     }
 }
 
-// La URL de la API para cargar los horarios libres desde el navegador
-$extraHead = '<meta name="api-base" content="' . htmlspecialchars($config['api_url']) . '">';
-
-inicio_html('Pedir turno', $extraHead);
+$apiBase = htmlspecialchars($config['api_url'], ENT_QUOTES);
+inicio_html('Pedir turno', '<meta name="api-base" content="' . $apiBase . '">');
+mostrar_mensajes('', $errores);
 ?>
-  <h1>Pedir turno</h1>
-  <?php mostrar_mensajes($mensaje, $errores); ?>
 
-  <form method="POST" action="turno_nuevo.php" class="tarjeta destacada">
-    <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+<section class="tarjeta">
+    <h1>Pedir turno</h1>
 
-    <h2 style="margin-top:0">1. Tu vehículo</h2>
-    <div class="formulario">
-      <label class="campo">Modelo
-        <input type="text" name="modelo" maxlength="80" value="<?= htmlspecialchars($valores['modelo']) ?>" required>
-      </label>
-      <label class="campo">Año
-        <input type="number" name="anio" min="1950" max="<?= date('Y') + 1 ?>" value="<?= htmlspecialchars($valores['anio']) ?>" required>
-      </label>
-      <label class="campo">Patente
-        <input type="text" name="patente" maxlength="10" value="<?= htmlspecialchars($valores['patente']) ?>" required>
-      </label>
-      <label class="campo">Kilómetros
-        <input type="number" name="kilometros" min="0" value="<?= htmlspecialchars($valores['kilometros']) ?>" required>
-      </label>
-      <label class="campo completo">Motivo del ingreso
-        <input type="text" name="motivo" maxlength="255" value="<?= htmlspecialchars($valores['motivo']) ?>" placeholder="Ej: hace ruido la correa" required>
-      </label>
-    </div>
+    <form method="post" action="turno_nuevo.php" id="form-turno" novalidate>
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
 
-    <h2>2. Fecha y horario</h2>
-    <div class="formulario">
-      <label class="campo completo">Fecha
-        <input type="date" id="fecha" name="fecha" min="<?= date('Y-m-d') ?>" value="<?= htmlspecialchars($valores['fecha']) ?>" required>
-      </label>
-    </div>
+        <fieldset class="tipo">
+            <legend>¿Qué vehículo traés?</legend>
+            <label>
+                <input type="radio" name="tipo" value="auto" <?= $v['tipo'] !== 'moto' ? 'checked' : '' ?>>
+                Auto
+            </label>
+            <label>
+                <input type="radio" name="tipo" value="moto" <?= $v['tipo'] === 'moto' ? 'checked' : '' ?>>
+                Moto
+            </label>
+        </fieldset>
 
-    <p class="campo" style="margin:14px 0 8px">Horarios libres</p>
-    <div id="chips" class="horarios">
-      <span class="vacio">Elegí una fecha para ver los horarios.</span>
-    </div>
-    <input type="hidden" id="hora" name="hora" value="<?= htmlspecialchars($valores['hora']) ?>">
+        <label>
+            Patente
+            <input type="text" name="patente" id="patente" maxlength="10"
+                   value="<?= htmlspecialchars($v['patente']) ?>" placeholder="AB123CD">
+            <small id="ayuda-patente"></small>
+        </label>
 
-    <div style="margin-top:20px">
-      <button type="submit" class="btn btn-grande">Confirmar turno</button>
-    </div>
-  </form>
+        <div data-solo="auto">
+            <label>
+                Modelo
+                <input type="text" name="modelo" maxlength="100"
+                       value="<?= htmlspecialchars($v['tipo'] !== 'moto' ? $v['modelo'] : '') ?>"
+                       placeholder="VW Gol 1.6">
+            </label>
+        </div>
 
-  <script>
-    const API_BASE = document.querySelector('meta[name="api-base"]').content;
-    const fechaInput = document.getElementById('fecha');
-    const horaInput = document.getElementById('hora');
-    const contenedor = document.getElementById('chips');
+        <div data-solo="moto">
+            <label>
+                Marca
+                <input type="text" name="marca" maxlength="50"
+                       value="<?= htmlspecialchars($v['marca']) ?>" placeholder="Honda">
+            </label>
+            <label>
+                Modelo
+                <input type="text" name="modelo" maxlength="50"
+                       value="<?= htmlspecialchars($v['tipo'] === 'moto' ? $v['modelo'] : '') ?>"
+                       placeholder="Wave 110">
+            </label>
+            <label>
+                Cilindrada (cc)
+                <input type="number" name="cilindrada" min="50" max="3000"
+                       value="<?= htmlspecialchars($v['cilindrada']) ?>">
+            </label>
+        </div>
 
-    function cargarHorarios() {
-      contenedor.textContent = '';
-      horaInput.value = '';
-      if (!fechaInput.value) {
-        contenedor.innerHTML = '<span class="vacio">Elegí una fecha para ver los horarios.</span>';
-        return;
-      }
+        <label>
+            Año
+            <input type="number" name="anio" min="1950" max="<?= $anioMax ?>"
+                   value="<?= htmlspecialchars($v['anio']) ?>">
+        </label>
 
-      fetch(API_BASE + '/api/turnos/disponibles?fecha=' + encodeURIComponent(fechaInput.value))
-        .then((r) => {
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          return r.json();
-        })
-        .then((datos) => {
-          if (datos.horarios_libres.length === 0) {
-            contenedor.innerHTML = '<span class="vacio">No hay horarios libres ese día. Probá otra fecha.</span>';
-            return;
-          }
-          datos.horarios_libres.forEach((hora) => {
-            const boton = document.createElement('button');
-            boton.type = 'button';
-            boton.className = 'chip';
-            boton.textContent = hora;
-            boton.addEventListener('click', () => {
-              horaInput.value = hora;
-              document.querySelectorAll('.chip').forEach((c) => c.classList.remove('seleccionado'));
-              boton.classList.add('seleccionado');
+        <label>
+            Kilómetros
+            <input type="number" name="kilometros" min="0" value="<?= htmlspecialchars($v['kilometros']) ?>">
+        </label>
+
+        <label>
+            Motivo
+            <input type="text" name="motivo" maxlength="255" value="<?= htmlspecialchars($v['motivo']) ?>">
+        </label>
+
+        <label>
+            Fecha
+            <input type="date" name="fecha" id="fecha" min="<?= date('Y-m-d') ?>"
+                   value="<?= htmlspecialchars($v['fecha']) ?>">
+        </label>
+
+        <div id="horarios" class="chips"></div>
+        <input type="hidden" name="hora" id="hora" value="<?= htmlspecialchars($v['hora']) ?>">
+
+        <button type="submit" class="btn btn-grande">Reservar turno</button>
+    </form>
+</section>
+
+<script>
+(() => {
+    const API = document.querySelector('meta[name="api-base"]').content;
+    const form = document.getElementById('form-turno');
+    const fecha = document.getElementById('fecha');
+    const hora = document.getElementById('hora');
+    const contenedor = document.getElementById('horarios');
+    const ayuda = document.getElementById('ayuda-patente');
+    const textoAyuda = {
+        auto: 'Auto: AB123CD o ABC123',
+        moto: 'Moto: A123BCD o 123BCD',
+    };
+
+    // Muestra los campos del tipo elegido. Los campos ocultos se deshabilitan para que no se envíen.
+    function mostrarTipo() {
+        const tipo = form.querySelector('input[name="tipo"]:checked').value;
+        form.querySelectorAll('[data-solo]').forEach((bloque) => {
+            const activo = bloque.dataset.solo === tipo;
+            bloque.hidden = !activo;
+            bloque.querySelectorAll('input').forEach((input) => {
+                input.disabled = !activo;
             });
-            contenedor.appendChild(boton);
-          });
-        })
-        .catch(() => {
-          contenedor.innerHTML = '<span class="vacio">No se pudieron cargar los horarios. Revisá la conexión.</span>';
         });
+        ayuda.textContent = textoAyuda[tipo];
     }
 
-    fechaInput.addEventListener('change', cargarHorarios);
-    if (fechaInput.value) cargarHorarios();
-  </script>
-<?php
-link_panel();
-fin_html();
+    async function cargarHorarios(horaElegida = '') {
+        hora.value = horaElegida;
+        contenedor.innerHTML = '';
+        if (!fecha.value) {
+            return;
+        }
+        try {
+            const respuesta = await fetch(`${API}/api/turnos/disponibles?fecha=${encodeURIComponent(fecha.value)}`);
+            const datos = await respuesta.json();
+            if (!respuesta.ok) {
+                throw new Error(datos.error || 'Error');
+            }
+            if (datos.horarios_libres.length === 0) {
+                contenedor.textContent = 'No hay horarios libres ese día.';
+                return;
+            }
+            datos.horarios_libres.forEach((h) => {
+                const boton = document.createElement('button');
+                boton.type = 'button';
+                boton.className = 'chip' + (h === horaElegida ? ' activo' : '');
+                boton.textContent = h;
+                boton.addEventListener('click', () => {
+                    contenedor.querySelectorAll('.chip').forEach((c) => c.classList.remove('activo'));
+                    boton.classList.add('activo');
+                    hora.value = h;
+                });
+                contenedor.appendChild(boton);
+            });
+        } catch (e) {
+            contenedor.textContent = 'No pudimos cargar los horarios. Probá de nuevo.';
+        }
+    }
+
+    form.querySelectorAll('input[name="tipo"]').forEach((radio) => {
+        radio.addEventListener('change', mostrarTipo);
+    });
+    fecha.addEventListener('change', () => cargarHorarios(''));
+
+    mostrarTipo();
+    if (fecha.value) {
+        cargarHorarios(hora.value);
+    }
+})();
+</script>
+
+<?php fin_html(); ?>
