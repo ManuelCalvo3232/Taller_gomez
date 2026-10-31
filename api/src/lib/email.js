@@ -1,14 +1,14 @@
-import { Resend } from 'resend';
 import { pool } from '../db.js';
 
-// Sin RESEND_API_KEY no se envía nada, pero el intento queda registrado como fallido
-const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
+// Envío de mails con la API transaccional de Brevo
+const BREVO_URL = 'https://api.brevo.com/v3/smtp/email';
+const apiKey = process.env.BREVO_API_KEY;
 
-// Remitente. Con onboarding@resend.dev solo llega a la dirección de la cuenta de Resend
-const remitente = process.env.MAIL_FROM ?? 'Taller Gómez <onboarding@resend.dev>';
-
-// URL pública de la app (la que el cliente abre desde el mail)
-const appUrl = (process.env.APP_URL ?? 'http://localhost:8000').replace(/\/$/, '');
+// Remitente. Su dirección tiene que estar verificada en Brevo (Senders)
+const remitente = {
+  email: process.env.MAIL_FROM_EMAIL,
+  name: process.env.MAIL_FROM_NAME ?? 'Taller Gómez',
+};
 
 // Escapa los datos del usuario antes de meterlos en el HTML del mail
 function escapar(texto) {
@@ -79,23 +79,35 @@ export function plantillaPresupuesto({ nombre, modelo, patente, idTrabajo, idPre
   `);
 }
 
-// Envía el mail y deja registro en la tabla notificaciones. Devuelve true si salió bien
+// Envía el mail con Brevo y deja registro en la tabla notificaciones. Devuelve true si salió bien
 export async function enviarMail({ idTrabajo, destino, asunto, html }) {
   let estado = 'enviado';
   let detalle = null;
 
   try {
-    if (!resend) {
-      throw new Error('RESEND_API_KEY no configurada');
+    if (!apiKey || !remitente.email) {
+      throw new Error('Falta BREVO_API_KEY o MAIL_FROM_EMAIL');
     }
-    const { error } = await resend.emails.send({
-      from: remitente,
-      to: destino,
-      subject: asunto,
-      html,
+
+    const respuesta = await fetch(BREVO_URL, {
+      method: 'POST',
+      headers: {
+        'api-key': apiKey,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({
+        sender: remitente,
+        to: [{ email: destino }],
+        subject: asunto,
+        htmlContent: html,
+      }),
+      signal: AbortSignal.timeout(10000),
     });
-    if (error) {
-      throw new Error(error.message);
+
+    if (!respuesta.ok) {
+      const cuerpo = await respuesta.json().catch(() => ({}));
+      throw new Error(`Brevo HTTP ${respuesta.status}: ${cuerpo.message ?? 'sin detalle'}`);
     }
   } catch (err) {
     estado = 'fallido';
@@ -104,7 +116,7 @@ export async function enviarMail({ idTrabajo, destino, asunto, html }) {
   }
 
   await pool.execute(
-    "INSERT INTO notificaciones (id_trabajo, destino, asunto, estado, detalle, creado_en) VALUES (?, ?, ?, ?, ?, NOW())",
+    'INSERT INTO notificaciones (id_trabajo, destino, asunto, estado, detalle, creado_en) VALUES (?, ?, ?, ?, ?, NOW())',
     [idTrabajo, destino, asunto.slice(0, 150), estado, detalle]
   );
 
