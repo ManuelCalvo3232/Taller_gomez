@@ -54,7 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new DomainException('El diagnóstico es obligatorio (máximo 2000 caracteres).');
             }
 
-            // El UNIQUE de id_trabajo hace que haya un solo diagnóstico
             $stmt = $pdo->prepare(
                 "INSERT INTO diagnosticos (id_trabajo, descripcion) VALUES (?, ?)
                  ON DUPLICATE KEY UPDATE descripcion = VALUES(descripcion)"
@@ -63,7 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mensaje = 'Diagnóstico guardado.';
 
         } elseif ($accion === 'presupuesto') {
-            // Regla de negocio: solo se presupuesta con diagnóstico y en un estado que lo admita
             if (!admite_presupuesto($trabajo['estado'])) {
                 throw new DomainException('Este trabajo ya no admite presupuestos nuevos.');
             }
@@ -74,7 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 throw new DomainException('Primero cargá el diagnóstico.');
             }
 
-            // Leer las filas del formulario (son arrays paralelos)
             $idsRepuesto = $_POST['id_repuesto'] ?? [];
             $descripciones = $_POST['descripcion'] ?? [];
             $cantidades = $_POST['cantidad'] ?? [];
@@ -87,7 +84,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $descripcionItem = trim($descripcionItem);
                 $idRepuesto = filter_var($idsRepuesto[$i] ?? '', FILTER_VALIDATE_INT);
 
-                // Fila vacía: la ignoramos
                 if ($descripcionItem === '' && $idRepuesto === false) {
                     continue;
                 }
@@ -111,7 +107,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $descripcionFinal = $descripcionItem !== '' ? $descripcionItem : $repuesto['nombre'];
                     $precio = (float) $repuesto['precio'];
                 } else {
-                    // Mano de obra: el precio lo carga el mecánico
                     $precio = filter_var($precios[$i] ?? '', FILTER_VALIDATE_FLOAT);
                     if ($precio === false || $precio < 0) {
                         throw new DomainException('El precio de mano de obra no es válido.');
@@ -121,6 +116,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $idRepuesto = null;
                 }
 
+                if ($descripcionFinal === '') {
+                    throw new DomainException('Cada ítem necesita una descripción.');
+                }
                 if (strlen($descripcionFinal) > 150) {
                     throw new DomainException('Una descripción supera los 150 caracteres.');
                 }
@@ -132,7 +130,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'cantidad' => $cantidad,
                     'precio' => $precio,
                 ];
-                // El total se calcula acá, en el servidor
                 $total += $cantidad * $precio;
             }
 
@@ -164,7 +161,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
             }
 
-            // Pasa a "presupuestado" solo si todavía no lo estaba
             if (puede_pasar($trabajo['estado'], 'presupuestado')) {
                 $pdo->prepare("UPDATE trabajos SET estado = 'presupuestado' WHERE id_trabajo = ?")
                     ->execute([$idTrabajo]);
@@ -174,7 +170,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mensaje = 'Presupuesto cargado por $ ' . number_format($total, 2, ',', '.') . '.';
 
         } elseif ($accion === 'listo') {
-            // La transición la decide el mapa de estados, no esta página
             if (!puede_pasar($trabajo['estado'], 'listo')) {
                 throw new DomainException('Solo se puede marcar listo un trabajo aprobado por el cliente.');
             }
@@ -199,7 +194,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         error_log($e->getMessage());
     }
 
-    // PRG: si todo salió bien, redirigir para que recargar no repita la acción
     if ($mensaje !== '' && empty($errores)) {
         flash_set($mensaje);
         header('Location: trabajo.php?id=' . $idTrabajo);
@@ -209,7 +203,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $trabajo = cargar_trabajo($pdo, $idTrabajo, $idMecanico);
 }
 
-// Datos para mostrar
 $stmt = $pdo->prepare("SELECT descripcion FROM diagnosticos WHERE id_trabajo = ?");
 $stmt->execute([$idTrabajo]);
 $diagnostico = $stmt->fetchColumn();
@@ -220,78 +213,115 @@ $presupuestos = $stmt->fetchAll();
 
 $repuestos = $pdo->query("SELECT id_repuesto, nombre, precio FROM repuestos ORDER BY nombre")->fetchAll();
 
+// Etapas para la barra de progreso. Índice del estado actual dentro de la secuencia
+$etapas = ['Recibido', 'Diagnóstico', 'Presupuesto', 'Aprobado', 'Listo'];
+$indiceEstado = match ($trabajo['estado']) {
+    'recibido' => 0,
+    'en_diagnostico' => 1,
+    'presupuestado' => 2,
+    'aprobado', 'en_reparacion' => 3,
+    'listo' => 4,
+    default => -1, // rechazado: no se muestra progreso
+};
+
 inicio_html('Trabajo #' . $idTrabajo);
-mostrar_mensajes($mensaje, $errores);
 ?>
-  <h1>Trabajo #<?= (int) $idTrabajo ?></h1>
+  <h1>Trabajo #<?= (int) $idTrabajo ?> · <?= htmlspecialchars($trabajo['modelo']) ?> · <?= htmlspecialchars($trabajo['patente']) ?></h1>
+  <?php mostrar_mensajes($mensaje, $errores); ?>
 
-  <h2>Vehículo y cliente</h2>
-  <p>
-    <?= htmlspecialchars($trabajo['modelo']) ?> (<?= (int) $trabajo['anio'] ?>) · <?= htmlspecialchars($trabajo['patente']) ?><br>
-    Kilómetros: <?= (int) $trabajo['kilometros'] ?><br>
-    Dueño: <?= htmlspecialchars($trabajo['cliente']) ?> · Tel: <?= htmlspecialchars($trabajo['telefono'] ?? '-') ?><br>
-    Motivo: <?= htmlspecialchars($trabajo['motivo']) ?><br>
-    Estado: <strong><?= htmlspecialchars($trabajo['estado']) ?></strong>
-  </p>
-
-  <h2>Diagnóstico</h2>
-  <?php if ($diagnostico): ?>
-    <p><?= nl2br(htmlspecialchars($diagnostico)) ?></p>
+  <?php if ($indiceEstado >= 0): ?>
+    <ol class="etapas">
+      <?php foreach ($etapas as $i => $etapa): ?>
+        <li class="<?= $i < $indiceEstado ? 'hecha' : ($i === $indiceEstado ? 'activa' : '') ?>"><?= $etapa ?></li>
+      <?php endforeach; ?>
+    </ol>
+  <?php else: ?>
+    <p><?= badge_estado($trabajo['estado']) ?></p>
   <?php endif; ?>
-  <form method="POST" action="trabajo.php?id=<?= (int) $idTrabajo ?>">
-    <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
-    <input type="hidden" name="accion" value="diagnostico">
-    <input type="hidden" name="id_trabajo" value="<?= (int) $idTrabajo ?>">
-    <textarea name="descripcion" rows="3" cols="50" maxlength="2000" required><?= htmlspecialchars($diagnostico ?: '') ?></textarea><br>
-    <button type="submit">Guardar diagnóstico</button>
-  </form>
+
+  <div class="tarjeta">
+    <h3>Vehículo y cliente</h3>
+    <div class="detalle">
+      Dueño: <strong><?= htmlspecialchars($trabajo['cliente']) ?></strong> · Tel: <?= htmlspecialchars($trabajo['telefono'] ?? '-') ?><br>
+      Año <?= (int) $trabajo['anio'] ?> · <?= (int) $trabajo['kilometros'] ?> km<br>
+      Motivo del ingreso: <?= htmlspecialchars($trabajo['motivo']) ?>
+    </div>
+  </div>
+
+  <div class="tarjeta <?= $diagnostico ? '' : 'destacada' ?>">
+    <h3>Diagnóstico</h3>
+    <?php if ($diagnostico): ?>
+      <p><?= nl2br(htmlspecialchars($diagnostico)) ?></p>
+    <?php endif; ?>
+    <form method="POST" action="trabajo.php?id=<?= (int) $idTrabajo ?>" class="formulario">
+      <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+      <input type="hidden" name="accion" value="diagnostico">
+      <input type="hidden" name="id_trabajo" value="<?= (int) $idTrabajo ?>">
+      <label class="campo completo">Descripción del problema
+        <textarea name="descripcion" rows="3" maxlength="2000" required><?= htmlspecialchars($diagnostico ?: '') ?></textarea>
+      </label>
+      <div class="completo"><button type="submit" class="btn">Guardar diagnóstico</button></div>
+    </form>
+  </div>
 
   <?php if ($diagnostico && admite_presupuesto($trabajo['estado'])): ?>
-  <h2>Presupuesto</h2>
-  <form method="POST" action="trabajo.php?id=<?= (int) $idTrabajo ?>">
-    <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
-    <input type="hidden" name="accion" value="presupuesto">
-    <input type="hidden" name="id_trabajo" value="<?= (int) $idTrabajo ?>">
+  <div class="tarjeta destacada">
+    <h3>Presupuesto</h3>
+    <p class="detalle">Completá hasta 5 ítems. Para repuestos elegí el producto (el precio sale del stock); para mano de obra, dejá el repuesto en "Mano de obra" y escribí el precio.</p>
+    <form method="POST" action="trabajo.php?id=<?= (int) $idTrabajo ?>">
+      <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+      <input type="hidden" name="accion" value="presupuesto">
+      <input type="hidden" name="id_trabajo" value="<?= (int) $idTrabajo ?>">
 
-    <?php for ($i = 0; $i < 5; $i++): ?>
-      <div>
-        <select name="id_repuesto[]">
-          <option value="">Mano de obra</option>
-          <?php foreach ($repuestos as $r): ?>
-            <option value="<?= (int) $r['id_repuesto'] ?>"><?= htmlspecialchars($r['nombre']) ?> ($<?= number_format($r['precio'], 2, ',', '.') ?>)</option>
-          <?php endforeach; ?>
-        </select>
-        <input type="text" name="descripcion[]" maxlength="150" placeholder="Descripción">
-        <input type="number" name="cantidad[]" min="1" value="1" style="width:4em">
-        <input type="number" name="precio[]" min="0" step="0.01" placeholder="Precio (solo mano de obra)">
-      </div>
-    <?php endfor; ?>
+      <?php for ($i = 0; $i < 5; $i++): ?>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:8px; margin-bottom:10px;">
+          <select name="id_repuesto[]">
+            <option value="">Mano de obra</option>
+            <?php foreach ($repuestos as $r): ?>
+              <option value="<?= (int) $r['id_repuesto'] ?>"><?= htmlspecialchars($r['nombre']) ?> ($<?= number_format($r['precio'], 2, ',', '.') ?>)</option>
+            <?php endforeach; ?>
+          </select>
+          <input type="text" name="descripcion[]" maxlength="150" placeholder="Descripción">
+          <input type="number" name="cantidad[]" min="1" value="1">
+          <input type="number" name="precio[]" min="0" step="0.01" placeholder="Precio (mano de obra)">
+        </div>
+      <?php endfor; ?>
 
-    <button type="submit">Cargar presupuesto</button>
-  </form>
+      <button type="submit" class="btn btn-grande">Cargar presupuesto</button>
+    </form>
+  </div>
   <?php endif; ?>
 
   <?php if (!empty($presupuestos)): ?>
-    <h3>Presupuestos anteriores</h3>
-    <ul>
-      <?php foreach ($presupuestos as $p): ?>
-        <li>
-          #<?= (int) $p['id_presupuesto'] ?> · $ <?= number_format($p['total'], 2, ',', '.') ?> · <?= htmlspecialchars($p['estado']) ?> · <?= htmlspecialchars($p['fecha_envio']) ?>
-        </li>
-      <?php endforeach; ?>
-    </ul>
+    <div class="tarjeta">
+      <h3>Presupuestos anteriores</h3>
+      <div class="lista">
+        <?php foreach ($presupuestos as $p): ?>
+          <div class="item">
+            <div>
+              <div class="titulo">Presupuesto #<?= (int) $p['id_presupuesto'] ?> · $ <?= number_format($p['total'], 2, ',', '.') ?></div>
+              <div class="detalle"><?= htmlspecialchars($p['fecha_envio']) ?></div>
+            </div>
+            <?= badge_estado($p['estado']) ?>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    </div>
   <?php endif; ?>
 
   <?php if (puede_pasar($trabajo['estado'], 'listo')): ?>
-    <h2>Entrega</h2>
-    <form method="POST" action="trabajo.php?id=<?= (int) $idTrabajo ?>">
-      <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
-      <input type="hidden" name="accion" value="listo">
-      <input type="hidden" name="id_trabajo" value="<?= (int) $idTrabajo ?>">
-      <button type="submit">Marcar como listo</button>
-    </form>
+    <div class="tarjeta destacada">
+      <h3>Entrega</h3>
+      <p class="detalle">El cliente aprobó el presupuesto. Cuando el vehículo esté terminado, marcalo como listo.</p>
+      <form method="POST" action="trabajo.php?id=<?= (int) $idTrabajo ?>">
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+        <input type="hidden" name="accion" value="listo">
+        <input type="hidden" name="id_trabajo" value="<?= (int) $idTrabajo ?>">
+        <button type="submit" class="btn btn-grande">Marcar como listo</button>
+      </form>
+    </div>
   <?php endif; ?>
 
-  <p><a href="trabajos.php">Volver a trabajos</a></p>
+  <p><a href="trabajos.php">← Volver a trabajos</a></p>
 <?php
 fin_html();
