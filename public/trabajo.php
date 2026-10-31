@@ -5,6 +5,8 @@ require __DIR__ . '/../src/auth/flash.php';
 require __DIR__ . '/../src/views/layout.php';
 require __DIR__ . '/../src/dominio/trabajos.php';
 require __DIR__ . '/../src/integraciones/api_node.php';
+require __DIR__ . '/../src/integraciones/api_node.php';
+$config = require __DIR__ . '/../config/config.php';
 
 requerir_rol('mecanico');
 
@@ -168,7 +170,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             $pdo->commit();
-            $mensaje = 'Presupuesto cargado por $ ' . number_format($total, 2, ',', '.') . '.';
+            $enviado = notificar_presupuesto_api($idPresupuesto, $_SESSION['api_token'] ?? '', $config['api_url']);
+            $mensaje = 'Presupuesto cargado por $ ' . number_format($total, 2, ',', '.') . '. '
+                     . ($enviado ? 'Se envió el aviso al cliente.' : 'No se pudo enviar el aviso por mail.');
 
         } elseif ($accion === 'listo') {
             if (!puede_pasar($trabajo['estado'], 'listo')) {

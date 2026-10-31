@@ -5,6 +5,7 @@ import rateLimit from 'express-rate-limit';
 import turnosRouter from './routes/turnos.js';
 import trabajosRouter from './routes/trabajos.js';
 import dashboardRouter from './routes/dashboard.js';
+import presupuestosRouter from './routes/presupuestos.js';
 
 const app = express();
 
@@ -54,6 +55,7 @@ app.use(express.json({ limit: '10kb' }));
 app.use('/api/turnos', turnosRouter);
 app.use('/api/trabajos', trabajosRouter);
 app.use('/api/dashboard', dashboardRouter);
+app.use('/api/presupuestos', presupuestosRouter);
 
 // Ruta que no existe
 app.use((req, res) => {
