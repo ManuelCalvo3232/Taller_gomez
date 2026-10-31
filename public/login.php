@@ -28,7 +28,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo = conectar();
 
-            // Antes de verificar la clave: si la IP superó el límite, no seguimos
             if (login_bloqueado($pdo, $ip)) {
                 $errores[] = 'Demasiados intentos fallidos. Esperá ' . VENTANA_LOGIN_MINUTOS . ' minutos y probá de nuevo.';
             } else {
@@ -71,17 +70,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 inicio_html('Iniciar sesión');
-mostrar_mensajes($mensaje, $errores);
 ?>
-  <h1>Iniciar sesión</h1>
+  <div class="auth">
+    <div class="tarjeta destacada">
+      <h1>Iniciar sesión</h1>
+      <?php mostrar_mensajes($mensaje, $errores); ?>
 
-  <form method="POST" action="login.php">
-    <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
-    <label>Email <input type="email" name="email" value="<?= htmlspecialchars($email) ?>" required></label><br>
-    <label>Clave <input type="password" name="clave" required></label><br>
-    <button type="submit">Entrar</button>
-  </form>
+      <form method="POST" action="login.php" class="formulario">
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+        <label class="campo completo">Email
+          <input type="email" name="email" value="<?= htmlspecialchars($email) ?>" required>
+        </label>
+        <label class="campo completo">Clave
+          <input type="password" name="clave" required>
+        </label>
+        <div class="completo">
+          <button type="submit" class="btn btn-grande">Entrar</button>
+        </div>
+      </form>
 
-  <p>¿No tenés cuenta? <a href="registro.php">Registrate</a></p>
+      <p style="margin-top:16px">¿No tenés cuenta? <a href="registro.php">Registrate</a></p>
+    </div>
+  </div>
 <?php
 fin_html();

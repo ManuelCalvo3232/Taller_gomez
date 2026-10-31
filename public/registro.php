@@ -15,7 +15,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $clave = $_POST['clave'] ?? '';
 
-    // Validaciones en el servidor (nunca confiar solo en el HTML)
     if ($nombre === '' || strlen($nombre) > 100) {
         $errores[] = 'El nombre es obligatorio (máximo 100 caracteres).';
     }
@@ -30,7 +29,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo = conectar();
 
-            // La clave nunca se guarda en texto plano
             $hash = password_hash($clave, PASSWORD_DEFAULT);
 
             // El rol lo fija el servidor, no el formulario
@@ -42,7 +40,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: login.php');
             exit;
         } catch (PDOException $e) {
-            // SQLSTATE 23000 = violación de restricción (email duplicado por el UNIQUE)
             if ($e->getCode() === '23000') {
                 $errores[] = 'Ya existe una cuenta con ese email.';
             } else {
@@ -54,18 +51,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 inicio_html('Crear cuenta');
-mostrar_mensajes('', $errores);
 ?>
-  <h1>Crear cuenta</h1>
+  <div class="auth">
+    <div class="tarjeta destacada">
+      <h1>Crear cuenta</h1>
+      <?php mostrar_mensajes('', $errores); ?>
 
-  <form method="POST" action="registro.php">
-    <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
-    <label>Nombre <input type="text" name="nombre" value="<?= htmlspecialchars($nombre) ?>" required></label><br>
-    <label>Email <input type="email" name="email" value="<?= htmlspecialchars($email) ?>" required></label><br>
-    <label>Clave (mínimo 8) <input type="password" name="clave" required></label><br>
-    <button type="submit">Registrarme</button>
-  </form>
+      <form method="POST" action="registro.php" class="formulario">
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+        <label class="campo completo">Nombre
+          <input type="text" name="nombre" maxlength="100" value="<?= htmlspecialchars($nombre) ?>" required>
+        </label>
+        <label class="campo completo">Email
+          <input type="email" name="email" maxlength="150" value="<?= htmlspecialchars($email) ?>" required>
+        </label>
+        <label class="campo completo">Clave (mínimo 8 caracteres)
+          <input type="password" name="clave" required>
+        </label>
+        <div class="completo">
+          <button type="submit" class="btn btn-grande">Registrarme</button>
+        </div>
+      </form>
 
-  <p>¿Ya tenés cuenta? <a href="login.php">Iniciar sesión</a></p>
+      <p style="margin-top:16px">¿Ya tenés cuenta? <a href="login.php">Iniciar sesión</a></p>
+    </div>
+  </div>
 <?php
 fin_html();
