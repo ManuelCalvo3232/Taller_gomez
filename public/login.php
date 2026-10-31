@@ -31,36 +31,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (login_bloqueado($pdo, $ip)) {
                 $errores[] = 'Demasiados intentos fallidos. Esperá ' . VENTANA_LOGIN_MINUTOS . ' minutos y probá de nuevo.';
             } else {
-                $stmt = $pdo->prepare("SELECT id_usuario, nombre, password_hash, rol FROM usuarios WHERE email = ?");
+                $stmt = $pdo->prepare(
+                    "SELECT id_usuario, nombre, password_hash, rol, email_verificado_en
+                     FROM usuarios WHERE email = ?"
+                );
                 $stmt->execute([$email]);
                 $usuario = $stmt->fetch();
 
                 if ($usuario && password_verify($clave, $usuario['password_hash'])) {
-                    limpiar_fallos_login($pdo, $ip);
+                    if ($usuario['email_verificado_en'] === null) {
+                        // Clave correcta pero sin verificar: no inicia sesión ni cuenta como fallo
+                        $errores[] = 'Tu cuenta todavía no está verificada. Revisá tu mail o pedí un nuevo enlace.';
+                    } else {
+                        limpiar_fallos_login($pdo, $ip);
 
-                    // Cambiar el id de sesión evita la fijación de sesión
-                    session_regenerate_id(true);
+                        // Cambiar el id de sesión evita la fijación de sesión
+                        session_regenerate_id(true);
 
-                    $_SESSION['usuario_id'] = $usuario['id_usuario'];
-                    $_SESSION['nombre'] = $usuario['nombre'];
-                    $_SESSION['rol'] = $usuario['rol'];
+                        $_SESSION['usuario_id'] = $usuario['id_usuario'];
+                        $_SESSION['nombre'] = $usuario['nombre'];
+                        $_SESSION['rol'] = $usuario['rol'];
 
-                    // Token para la API de Node: se guarda solo su hash en la base
-                    $tokenApi = bin2hex(random_bytes(32));
-                    $stmt = $pdo->prepare(
-                        "INSERT INTO tokens_api (token_hash, id_usuario, expira_en)
-                         VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 8 HOUR))"
-                    );
-                    $stmt->execute([hash('sha256', $tokenApi), $usuario['id_usuario']]);
-                    $_SESSION['api_token'] = $tokenApi;
+                        // Token para la API de Node: se guarda solo su hash en la base
+                        $tokenApi = bin2hex(random_bytes(32));
+                        $stmt = $pdo->prepare(
+                            "INSERT INTO tokens_api (token_hash, id_usuario, expira_en)
+                             VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 8 HOUR))"
+                        );
+                        $stmt->execute([hash('sha256', $tokenApi), $usuario['id_usuario']]);
+                        $_SESSION['api_token'] = $tokenApi;
 
-                    header('Location: panel.php');
-                    exit;
+                        header('Location: panel.php');
+                        exit;
+                    }
+                } else {
+                    // Fallo: lo registramos para el límite. Mismo mensaje si el email no existe
+                    registrar_fallo_login($pdo, $ip);
+                    $errores[] = 'Email o clave incorrectos.';
                 }
-
-                // Fallo: lo registramos para el límite. Mismo mensaje si el email no existe
-                registrar_fallo_login($pdo, $ip);
-                $errores[] = 'Email o clave incorrectos.';
             }
         } catch (PDOException $e) {
             $errores[] = 'Error interno. Intentá de nuevo más tarde.';
@@ -90,6 +98,7 @@ inicio_html('Iniciar sesión');
       </form>
 
       <p style="margin-top:16px">¿No tenés cuenta? <a href="registro.php">Registrate</a></p>
+      <p style="margin-top:8px">¿No te llegó el mail? <a href="reenviar_verificacion.php">Reenviar verificación</a></p>
     </div>
   </div>
 <?php
