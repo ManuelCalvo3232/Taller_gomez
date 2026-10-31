@@ -5,7 +5,6 @@ require __DIR__ . '/../src/auth/flash.php';
 require __DIR__ . '/../src/views/layout.php';
 require __DIR__ . '/../src/dominio/trabajos.php';
 require __DIR__ . '/../src/integraciones/api_node.php';
-require __DIR__ . '/../src/integraciones/api_node.php';
 $config = require __DIR__ . '/../config/config.php';
 
 requerir_rol('mecanico');
