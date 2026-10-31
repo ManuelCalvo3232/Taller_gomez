@@ -154,10 +154,10 @@ mostrar_mensajes('', $errores);
 <section class="tarjeta">
     <h1>Pedir turno</h1>
 
-    <form method="post" action="turno_nuevo.php" id="form-turno" novalidate>
+    <form method="post" action="turno_nuevo.php" id="form-turno" class="formulario" novalidate>
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
 
-        <fieldset class="tipo">
+        <fieldset class="tipo completo">
             <legend>¿Qué vehículo traés?</legend>
             <label>
                 <input type="radio" name="tipo" value="auto" <?= $v['tipo'] !== 'moto' ? 'checked' : '' ?>>
@@ -169,15 +169,15 @@ mostrar_mensajes('', $errores);
             </label>
         </fieldset>
 
-        <label>
+        <label class="campo">
             Patente
             <input type="text" name="patente" id="patente" maxlength="10"
                    value="<?= htmlspecialchars($v['patente']) ?>" placeholder="AB123CD">
             <small id="ayuda-patente"></small>
         </label>
 
-        <div data-solo="auto">
-            <label>
+        <div data-solo="auto" class="grupo">
+            <label class="campo">
                 Modelo
                 <input type="text" name="modelo" maxlength="100"
                        value="<?= htmlspecialchars($v['tipo'] !== 'moto' ? $v['modelo'] : '') ?>"
@@ -185,48 +185,48 @@ mostrar_mensajes('', $errores);
             </label>
         </div>
 
-        <div data-solo="moto">
-            <label>
+        <div data-solo="moto" class="grupo">
+            <label class="campo">
                 Marca
                 <input type="text" name="marca" maxlength="50"
                        value="<?= htmlspecialchars($v['marca']) ?>" placeholder="Honda">
             </label>
-            <label>
+            <label class="campo">
                 Modelo
                 <input type="text" name="modelo" maxlength="50"
                        value="<?= htmlspecialchars($v['tipo'] === 'moto' ? $v['modelo'] : '') ?>"
                        placeholder="Wave 110">
             </label>
-            <label>
+            <label class="campo">
                 Cilindrada (cc)
                 <input type="number" name="cilindrada" min="50" max="3000"
                        value="<?= htmlspecialchars($v['cilindrada']) ?>">
             </label>
         </div>
 
-        <label>
+        <label class="campo">
             Año
             <input type="number" name="anio" min="1950" max="<?= $anioMax ?>"
                    value="<?= htmlspecialchars($v['anio']) ?>">
         </label>
 
-        <label>
+        <label class="campo">
             Kilómetros
             <input type="number" name="kilometros" min="0" value="<?= htmlspecialchars($v['kilometros']) ?>">
         </label>
 
-        <label>
+        <label class="campo completo">
             Motivo
             <input type="text" name="motivo" maxlength="255" value="<?= htmlspecialchars($v['motivo']) ?>">
         </label>
 
-        <label>
+        <label class="campo">
             Fecha
             <input type="date" name="fecha" id="fecha" min="<?= date('Y-m-d') ?>"
                    value="<?= htmlspecialchars($v['fecha']) ?>">
         </label>
 
-        <div id="horarios" class="chips"></div>
+        <div id="horarios" class="horarios completo"></div>
         <input type="hidden" name="hora" id="hora" value="<?= htmlspecialchars($v['hora']) ?>">
 
         <button type="submit" class="btn btn-grande">Reservar turno</button>
@@ -278,11 +278,11 @@ mostrar_mensajes('', $errores);
             datos.horarios_libres.forEach((h) => {
                 const boton = document.createElement('button');
                 boton.type = 'button';
-                boton.className = 'chip' + (h === horaElegida ? ' activo' : '');
+                boton.className = 'chip' + (h === horaElegida ? ' seleccionado' : '');
                 boton.textContent = h;
                 boton.addEventListener('click', () => {
-                    contenedor.querySelectorAll('.chip').forEach((c) => c.classList.remove('activo'));
-                    boton.classList.add('activo');
+                    contenedor.querySelectorAll('.chip').forEach((c) => c.classList.remove('seleccionado'));
+                    boton.classList.add('seleccionado');
                     hora.value = h;
                 });
                 contenedor.appendChild(boton);

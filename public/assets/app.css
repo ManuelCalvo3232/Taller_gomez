@@ -226,3 +226,11 @@ a { color: var(--rojo); }
   .tarjeta { padding: 16px; }
   .etapas li { font-size: .66rem; }
 }
+/* Formulario de turnos: auto o moto */
+fieldset.tipo { border: 0; padding: 0; margin: 0; display: flex; gap: 18px; flex-wrap: wrap; font-weight: 600; }
+fieldset.tipo legend { font-weight: 600; font-size: .92rem; margin-bottom: 6px; padding: 0; }
+fieldset.tipo label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+fieldset.tipo input[type="radio"] { accent-color: var(--rojo); width: 18px; height: 18px; }
+.campo small { color: var(--gris-medio); font-weight: 400; }
+.grupo { display: contents; }
+[hidden] { display: none !important; }
