@@ -4,6 +4,7 @@ require __DIR__ . '/../src/auth/acceso.php';
 require __DIR__ . '/../src/auth/flash.php';
 require __DIR__ . '/../src/views/layout.php';
 require __DIR__ . '/../src/dominio/trabajos.php';
+require __DIR__ . '/../src/integraciones/api_node.php';
 
 requerir_rol('mecanico');
 
@@ -172,10 +173,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif ($accion === 'listo') {
             if (!puede_pasar($trabajo['estado'], 'listo')) {
                 throw new DomainException('Solo se puede marcar listo un trabajo aprobado por el cliente.');
-            }
+    }
             $pdo->prepare("UPDATE trabajos SET estado = 'listo' WHERE id_trabajo = ?")
                 ->execute([$idTrabajo]);
-            $mensaje = 'Vehículo marcado como listo.';
+
+        $config = require __DIR__ . '/../config/config.php';
+        $avisado = notificar_listo_api($idTrabajo, $_SESSION['api_token'] ?? '', $config['api_url']);
+        $mensaje = $avisado
+            ? 'Vehículo marcado como listo. Se envió el aviso al cliente.'
+            : 'Vehículo marcado como listo. No se pudo enviar el aviso por mail.';
 
         } else {
             throw new DomainException('Acción no válida.');
