@@ -76,7 +76,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         $pdo->prepare("UPDATE presupuestos SET estado = ?, fecha_respuesta = NOW() WHERE id_presupuesto = ?")
-            ->execute([$accion === 'aprobar' ? 'aprobado' : 'rechazado', $idPresupuesto]);
+            ->execute([$nuevoEstado === 'aprobado' ? 'aprobado' : 'rechazado', $idPresupuesto]);
         $pdo->prepare("UPDATE trabajos SET estado = ? WHERE id_trabajo = ?")
             ->execute([$nuevoEstado, $presupuesto['id_trabajo']]);
 
@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Listar los presupuestos de los vehículos de este cliente
+// Presupuestos de los vehículos de este cliente
 $stmt = $pdo->prepare(
     "SELECT p.id_presupuesto, p.total, p.estado, p.fecha_envio, p.fecha_respuesta,
             v.patente, v.modelo
@@ -127,47 +127,53 @@ foreach ($presupuestos as &$p) {
 unset($p);
 
 inicio_html('Mis presupuestos');
-mostrar_mensajes($mensaje, $errores);
 ?>
   <h1>Mis presupuestos</h1>
+  <?php mostrar_mensajes($mensaje, $errores); ?>
 
   <?php if (empty($presupuestos)): ?>
-    <p>Todavía no tenés presupuestos.</p>
+    <p class="vacio">Todavía no tenés presupuestos.</p>
   <?php endif; ?>
 
   <?php foreach ($presupuestos as $p): ?>
-    <div style="border:1px solid #ccc; padding:8px; margin-bottom:12px;">
-      <strong>Presupuesto #<?= (int) $p['id_presupuesto'] ?></strong> · <?= htmlspecialchars($p['modelo']) ?> · <?= htmlspecialchars($p['patente']) ?><br>
-      Enviado: <?= htmlspecialchars($p['fecha_envio']) ?><br>
+    <div class="tarjeta <?= $p['estado'] === 'enviado' ? 'destacada' : '' ?>">
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div>
+          <h3 style="margin:0">Presupuesto #<?= (int) $p['id_presupuesto'] ?> · <?= htmlspecialchars($p['modelo']) ?> · <?= htmlspecialchars($p['patente']) ?></h3>
+          <div class="detalle vacio">Enviado: <?= htmlspecialchars($p['fecha_envio']) ?></div>
+        </div>
+        <?= badge_estado($p['estado']) ?>
+      </div>
 
-      <table border="1" cellpadding="4" style="margin:8px 0;">
-        <tr><th>Descripción</th><th>Cant.</th><th>Precio unit.</th><th>Subtotal</th></tr>
-        <?php foreach ($p['items'] as $it): ?>
-          <tr>
-            <td><?= htmlspecialchars($it['descripcion']) ?></td>
-            <td><?= (int) $it['cantidad'] ?></td>
-            <td>$ <?= number_format($it['precio_unitario'], 2, ',', '.') ?></td>
-            <td>$ <?= number_format($it['cantidad'] * $it['precio_unitario'], 2, ',', '.') ?></td>
-          </tr>
-        <?php endforeach; ?>
-      </table>
+      <div class="tabla-wrap" style="margin:14px 0;">
+        <table class="tabla">
+          <tr><th>Descripción</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Subtotal</th></tr>
+          <?php foreach ($p['items'] as $it): ?>
+            <tr>
+              <td><?= htmlspecialchars($it['descripcion']) ?></td>
+              <td class="num"><?= (int) $it['cantidad'] ?></td>
+              <td class="num">$ <?= number_format($it['precio_unitario'], 2, ',', '.') ?></td>
+              <td class="num">$ <?= number_format($it['cantidad'] * $it['precio_unitario'], 2, ',', '.') ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </table>
+      </div>
 
-      <strong>Total: $ <?= number_format($p['total'], 2, ',', '.') ?></strong><br>
-      Estado: <?= htmlspecialchars($p['estado']) ?>
+      <h2 style="margin:0 0 4px; text-align:right;">Total: $ <?= number_format($p['total'], 2, ',', '.') ?></h2>
 
       <?php if ($p['estado'] === 'enviado'): ?>
-        <div style="margin-top:8px;">
-          <form method="POST" action="presupuestos.php" style="display:inline;">
+        <div class="acciones">
+          <form method="POST" action="presupuestos.php">
             <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
             <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">
             <input type="hidden" name="accion" value="aprobar">
-            <button type="submit">Aprobar</button>
+            <button type="submit" class="btn btn-grande">Aprobar</button>
           </form>
-          <form method="POST" action="presupuestos.php" style="display:inline;">
+          <form method="POST" action="presupuestos.php">
             <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
             <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">
             <input type="hidden" name="accion" value="rechazar">
-            <button type="submit">Rechazar</button>
+            <button type="submit" class="btn btn-outline btn-grande">Rechazar</button>
           </form>
         </div>
       <?php endif; ?>

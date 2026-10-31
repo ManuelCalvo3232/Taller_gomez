@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Traer los trabajos activos: los que no están asignados y los que son míos
+// Trabajos activos: los que no están asignados y los que son míos
 try {
     $pdo = conectar();
     $stmt = $pdo->prepare(
@@ -78,39 +78,50 @@ $sinAsignar = array_filter($trabajos, fn($t) => $t['id_mecanico'] === null);
 $misTrabajos = array_filter($trabajos, fn($t) => $t['id_mecanico'] !== null);
 
 inicio_html('Trabajos');
-mostrar_mensajes($mensaje, $errores);
 ?>
   <h1>Trabajos</h1>
+  <?php mostrar_mensajes($mensaje, $errores); ?>
 
   <h2>Sin asignar</h2>
   <?php if (empty($sinAsignar)): ?>
-    <p>No hay trabajos sin asignar.</p>
+    <p class="vacio">No hay trabajos sin asignar.</p>
   <?php endif; ?>
-  <?php foreach ($sinAsignar as $t): ?>
-    <div style="border:1px solid #ccc; padding:8px; margin-bottom:8px;">
-      <strong>#<?= (int) $t['id_trabajo'] ?></strong> · <?= htmlspecialchars($t['modelo']) ?> (<?= (int) $t['anio'] ?>) · <?= htmlspecialchars($t['patente']) ?><br>
-      Dueño: <?= htmlspecialchars($t['cliente']) ?> · Tel: <?= htmlspecialchars($t['telefono'] ?? '-') ?><br>
-      Motivo: <?= htmlspecialchars($t['motivo']) ?> · Km: <?= (int) $t['kilometros'] ?><br>
-      Turno: <?= htmlspecialchars($t['fecha_hora']) ?>
-      <form method="POST" action="trabajos.php">
-        <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
-        <input type="hidden" name="id_trabajo" value="<?= (int) $t['id_trabajo'] ?>">
-        <button type="submit">Asignarme</button>
-      </form>
-    </div>
-  <?php endforeach; ?>
+  <div class="lista">
+    <?php foreach ($sinAsignar as $t): ?>
+      <div class="item">
+        <div>
+          <div class="titulo">#<?= (int) $t['id_trabajo'] ?> · <?= htmlspecialchars($t['modelo']) ?> (<?= (int) $t['anio'] ?>) · <?= htmlspecialchars($t['patente']) ?></div>
+          <div class="detalle">
+            Motivo: <?= htmlspecialchars($t['motivo']) ?> · <?= (int) $t['kilometros'] ?> km<br>
+            Dueño: <?= htmlspecialchars($t['cliente']) ?> · Tel: <?= htmlspecialchars($t['telefono'] ?? '-') ?><br>
+            Turno: <?= htmlspecialchars($t['fecha_hora']) ?>
+          </div>
+        </div>
+        <form method="POST" action="trabajos.php">
+          <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+          <input type="hidden" name="id_trabajo" value="<?= (int) $t['id_trabajo'] ?>">
+          <button type="submit" class="btn">Asignarme</button>
+        </form>
+      </div>
+    <?php endforeach; ?>
+  </div>
 
   <h2>Mis trabajos</h2>
   <?php if (empty($misTrabajos)): ?>
-    <p>No tenés trabajos asignados.</p>
+    <p class="vacio">No tenés trabajos asignados.</p>
   <?php endif; ?>
-  <?php foreach ($misTrabajos as $t): ?>
-    <div style="border:1px solid #ccc; padding:8px; margin-bottom:8px;">
-      <strong>#<?= (int) $t['id_trabajo'] ?></strong> · <?= htmlspecialchars($t['modelo']) ?> · <?= htmlspecialchars($t['patente']) ?><br>
-      Estado: <?= htmlspecialchars($t['estado']) ?> · Dueño: <?= htmlspecialchars($t['cliente']) ?><br>
-      <a href="trabajo.php?id=<?= (int) $t['id_trabajo'] ?>">Ver trabajo</a>
-    </div>
-  <?php endforeach; ?>
+  <div class="lista">
+    <?php foreach ($misTrabajos as $t): ?>
+      <div class="item asignado">
+        <div>
+          <div class="titulo">#<?= (int) $t['id_trabajo'] ?> · <?= htmlspecialchars($t['modelo']) ?> · <?= htmlspecialchars($t['patente']) ?></div>
+          <div class="detalle">Dueño: <?= htmlspecialchars($t['cliente']) ?></div>
+          <div style="margin-top:6px"><?= badge_estado($t['estado']) ?></div>
+        </div>
+        <a class="btn btn-outline" href="trabajo.php?id=<?= (int) $t['id_trabajo'] ?>">Ver trabajo</a>
+      </div>
+    <?php endforeach; ?>
+  </div>
 
 <?php
 link_panel();

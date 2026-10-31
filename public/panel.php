@@ -7,34 +7,35 @@ requerir_login();
 $nombre = $_SESSION['nombre'];
 $rol = $_SESSION['rol'];
 
-// Menú según el rol: cada opción apunta a una vista que se protege sola
+// Opciones según el rol: cada una apunta a una vista que se protege sola
 $opciones = [
     'cliente' => [
-        ['Pedir turno', 'turno_nuevo.php'],
-        ['Mis presupuestos', 'presupuestos.php'],
+        ['Pedir turno', 'Reservá el horario para tu vehículo', 'turno_nuevo.php'],
+        ['Mis presupuestos', 'Revisá y aprobá los presupuestos del taller', 'presupuestos.php'],
     ],
     'mecanico' => [
-        ['Trabajos sin asignar y asignados', 'trabajos.php'],
+        ['Trabajos', 'Asignate vehículos y cargá diagnósticos y presupuestos', 'trabajos.php'],
     ],
     'admin' => [
-        ['Dashboard', 'dashboard.php'],
+        ['Dashboard', 'Caja, trabajos, stock e insights del taller', 'dashboard.php'],
     ],
 ];
 
 inicio_html('Panel');
 ?>
   <h1>Hola, <?= htmlspecialchars($nombre) ?></h1>
-  <p>Rol: <?= htmlspecialchars($rol) ?></p>
+  <p class="vacio">Sesión de <?= htmlspecialchars($rol) ?></p>
 
-  <ul>
-    <?php foreach ($opciones[$rol] ?? [] as [$texto, $url]): ?>
-      <li><a href="<?= htmlspecialchars($url) ?>"><?= htmlspecialchars($texto) ?></a></li>
+  <div class="lista">
+    <?php foreach ($opciones[$rol] ?? [] as [$titulo, $detalle, $url]): ?>
+      <a class="item" href="<?= htmlspecialchars($url) ?>" style="text-decoration:none; color:inherit;">
+        <div>
+          <div class="titulo"><?= htmlspecialchars($titulo) ?></div>
+          <div class="detalle"><?= htmlspecialchars($detalle) ?></div>
+        </div>
+        <span class="btn">Entrar</span>
+      </a>
     <?php endforeach; ?>
-  </ul>
-
-  <form method="POST" action="logout.php">
-    <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
-    <button type="submit">Cerrar sesión</button>
-  </form>
+  </div>
 <?php
 fin_html();
