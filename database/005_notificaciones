@@ -1,0 +1,16 @@
+-- Registro de cada aviso por mail que intenta enviar la app.
+-- Sirve para auditar envíos y para ver si un mail falló.
+USE taller_gomez;
+
+CREATE TABLE notificaciones (
+  id_notificacion  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  id_trabajo       INT UNSIGNED NOT NULL,
+  destino          VARCHAR(150) NOT NULL,
+  asunto           VARCHAR(150) NOT NULL,
+  estado           ENUM('enviado', 'fallido') NOT NULL,
+  detalle          VARCHAR(255) NULL,
+  creado_en        DATETIME NOT NULL,
+  CONSTRAINT fk_notificaciones_trabajo
+    FOREIGN KEY (id_trabajo) REFERENCES trabajos (id_trabajo)
+    ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE = InnoDB;
