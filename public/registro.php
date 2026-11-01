@@ -78,10 +78,10 @@ inicio_html('Crear cuenta');
 
       <form method="POST" action="registro.php" class="formulario">
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
-        <label class="campo">Nombre
+        <label class="campo">Nombre(s)
           <input type="text" name="nombre" maxlength="100" value="<?= htmlspecialchars($nombre) ?>" required>
         </label>
-        <label class="campo">Apellido
+        <label class="campo">Apellido(s)
           <input type="text" name="apellido" maxlength="100" value="<?= htmlspecialchars($apellido) ?>" required>
         </label>
         <label class="campo completo">Email
