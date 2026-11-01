@@ -17,7 +17,7 @@ $idPresupuesto = filter_var($_POST['id_presupuesto'] ?? '', FILTER_VALIDATE_INT)
 
 // Solo se cobra un presupuesto aprobado, del cliente logueado, que todavía no esté pagado
 $stmt = $pdo->prepare(
-    "SELECT p.id_presupuesto, p.total, v.modelo, v.patente, u.email
+    "SELECT p.id_presupuesto, p.total, v.modelo, v.patente
      FROM presupuestos p
      JOIN trabajos t ON t.id_trabajo = p.id_trabajo
      JOIN turnos tu ON tu.id_turno = t.id_turno
@@ -46,8 +46,7 @@ try {
     $preferencia = mp_crear_preferencia(
         $idPago,
         "Presupuesto #{$presupuesto['id_presupuesto']} · {$presupuesto['modelo']} {$presupuesto['patente']}",
-        (float) $presupuesto['total'],
-        $presupuesto['email']
+        (float) $presupuesto['total']
     );
     $pdo->prepare('UPDATE pagos SET preference_id = ? WHERE id_pago = ?')
         ->execute([$preferencia['id'], $idPago]);

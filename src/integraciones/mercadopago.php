@@ -38,7 +38,7 @@ function mp_request(string $metodo, string $ruta, ?array $cuerpo = null): array
 
 // Crea la preferencia de pago. external_reference es el id del pago en nuestra base,
 // así el webhook sabe a qué cobro corresponde.
-function mp_crear_preferencia(int $idPago, string $titulo, float $monto, string $emailCliente): array
+function mp_crear_preferencia(int $idPago, string $titulo, float $monto): array
 {
     $appUrl = rtrim(getenv('APP_URL') ?: 'http://localhost:8000', '/');
 
@@ -49,7 +49,6 @@ function mp_crear_preferencia(int $idPago, string $titulo, float $monto, string 
             'currency_id' => 'ARS',
             'unit_price' => round($monto, 2),
         ]],
-        'payer' => ['email' => $emailCliente],
         'external_reference' => (string) $idPago,
         'back_urls' => [
             'success' => "$appUrl/pago_retorno.php",
