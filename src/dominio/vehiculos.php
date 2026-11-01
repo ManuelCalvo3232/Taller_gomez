@@ -18,32 +18,99 @@ function patente_valida(string $tipo, string $patente): bool
 
     return preg_match($patron, $patente) === 1;
 }
+
+// Catálogo para el formulario: marcas y modelos (con su tipo), tomados de la base
+function catalogo_vehiculos(PDO $pdo): array
+{
+    $marcas = $pdo->query('SELECT id_marca, nombre FROM marcas ORDER BY nombre')->fetchAll();
+    $modelos = $pdo->query('SELECT id_modelo, id_marca, tipo, nombre FROM modelos ORDER BY nombre')->fetchAll();
+
+    return [
+        'marcas' => array_map(fn (array $m): array => [
+            'id' => (int) $m['id_marca'],
+            'nombre' => $m['nombre'],
+        ], $marcas),
+        'modelos' => array_map(fn (array $m): array => [
+            'id' => (int) $m['id_modelo'],
+            'marca' => (int) $m['id_marca'],
+            'tipo' => $m['tipo'],
+            'nombre' => $m['nombre'],
+        ], $modelos),
+    ];
+}
+
+// Pasa una fila de vehiculos a los valores del formulario.
+// Si no hay marca o modelo de la lista, el formulario muestra "Otra" con el texto guardado.
+function valores_formulario_vehiculo(array $fila): array
+{
+    return [
+        'tipo' => $fila['tipo'],
+        'patente' => $fila['patente'],
+        'marca_id' => $fila['id_marca'] !== null ? (string) $fila['id_marca'] : 'otra',
+        'marca_otra' => (string) ($fila['marca_otra'] ?? ''),
+        'modelo_id' => $fila['id_modelo'] !== null ? (string) $fila['id_modelo'] : 'otro',
+        'modelo_otro' => (string) ($fila['modelo_otro'] ?? ''),
+        'anio' => (string) $fila['anio'],
+        'kilometros' => (string) $fila['kilometros'],
+        'cilindrada' => (string) ($fila['cilindrada'] ?? ''),
+    ];
+}
+
 // Valida los datos de un vehículo (alta o edición).
+// Marca y modelo: de la lista, o "otra" / "otro" con texto libre.
 // Devuelve [errores, datos normalizados]. Si hay errores, los datos no se usan.
-function validar_vehiculo(array $v): array
+function validar_vehiculo(PDO $pdo, array $v): array
 {
     $errores = [];
     $tipo = in_array($v['tipo'] ?? '', TIPOS_VEHICULO, true) ? $v['tipo'] : 'auto';
     $patente = normalizar_patente((string) ($v['patente'] ?? ''));
-    $marca = trim((string) ($v['marca'] ?? ''));
-    $textoModelo = trim((string) ($v['modelo'] ?? ''));
+    $marcaId = (string) ($v['marca_id'] ?? '');
+    $modeloId = (string) ($v['modelo_id'] ?? '');
+    $marcaOtra = trim((string) ($v['marca_otra'] ?? ''));
+    $modeloOtro = trim((string) ($v['modelo_otro'] ?? ''));
 
-    // Para motos, marca y modelo se guardan juntos en "modelo" (ej: "Honda Wave")
-    if ($tipo === 'moto') {
-        if ($marca === '') {
-            $errores[] = 'Indicá la marca de la moto.';
+    $idMarca = null;
+    $idModelo = null;
+    $marcaOtraDato = null;
+    $modeloOtroDato = null;
+    $nombreMarca = '';
+    $nombreModelo = '';
+
+    if ($marcaId === 'otra') {
+        if ($marcaOtra === '' || mb_strlen($marcaOtra) > 60) {
+            $errores[] = 'Escribí la marca (hasta 60 caracteres).';
         }
-        if ($textoModelo === '') {
-            $errores[] = 'Indicá el modelo de la moto.';
-        }
-        $modelo = trim($marca . ' ' . $textoModelo);
+        $marcaOtraDato = $marcaOtra;
+        $nombreMarca = $marcaOtra;
     } else {
-        $modelo = $textoModelo;
+        $idMarca = filter_var($marcaId, FILTER_VALIDATE_INT) ?: null;
+        $stmt = $pdo->prepare('SELECT nombre FROM marcas WHERE id_marca = ?');
+        $stmt->execute([$idMarca ?? 0]);
+        $nombreMarca = (string) $stmt->fetchColumn();
+        if ($nombreMarca === '') {
+            $errores[] = 'Elegí una marca de la lista o "Otra marca".';
+        }
     }
 
-    if ($modelo === '' || mb_strlen($modelo) > 100) {
-        $errores[] = 'El modelo es obligatorio y puede tener hasta 100 caracteres.';
+    // Con marca "otra" el modelo también es libre
+    if ($marcaId === 'otra' || $modeloId === 'otro') {
+        if ($modeloOtro === '' || mb_strlen($modeloOtro) > 80) {
+            $errores[] = 'Escribí el modelo (hasta 80 caracteres).';
+        }
+        $modeloOtroDato = $modeloOtro;
+        $nombreModelo = $modeloOtro;
+    } else {
+        $idModelo = filter_var($modeloId, FILTER_VALIDATE_INT) ?: null;
+        // El modelo tiene que ser de esa marca y del tipo elegido
+        $stmt = $pdo->prepare('SELECT nombre FROM modelos WHERE id_modelo = ? AND id_marca = ? AND tipo = ?');
+        $stmt->execute([$idModelo ?? 0, $idMarca ?? 0, $tipo]);
+        $nombreModelo = (string) $stmt->fetchColumn();
+        if ($nombreModelo === '') {
+            $errores[] = 'Elegí un modelo de la lista o "Otro modelo".';
+        }
     }
+
+    $modelo = trim($nombreMarca . ' ' . $nombreModelo);
 
     if (!patente_valida($tipo, $patente)) {
         $errores[] = $tipo === 'moto'
@@ -73,6 +140,10 @@ function validar_vehiculo(array $v): array
     return [$errores, [
         'tipo' => $tipo,
         'patente' => $patente,
+        'id_marca' => $idMarca,
+        'id_modelo' => $idModelo,
+        'marca_otra' => $marcaOtraDato,
+        'modelo_otro' => $modeloOtroDato,
         'modelo' => $modelo,
         'anio' => $anio,
         'kilometros' => $km,

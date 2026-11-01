@@ -4,6 +4,7 @@ require __DIR__ . '/../src/auth/flash.php';
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/dominio/vehiculos.php';
 require __DIR__ . '/../src/views/layout.php';
+require __DIR__ . '/../src/views/campos_vehiculo.php';
 
 requerir_rol('cliente');
 
@@ -47,26 +48,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($accion === 'guardar') {
-        [$errores, $datos] = validar_vehiculo($_POST);
+        [$errores, $datos] = validar_vehiculo($pdo, $_POST);
 
         if (!$errores) {
             try {
+                $columnas = [$datos['tipo'], $datos['patente'], $datos['id_marca'], $datos['id_modelo'],
+                    $datos['marca_otra'], $datos['modelo_otro'], $datos['modelo'], $datos['anio'],
+                    $datos['kilometros'], $datos['cilindrada']];
+
                 if ($idPost > 0) {
                     if (vehiculo_propio($pdo, $idPost, $idUsuario) === null) {
                         throw new DomainException('Vehículo no encontrado.');
                     }
                     $pdo->prepare(
-                        'UPDATE vehiculos SET tipo = ?, patente = ?, modelo = ?, anio = ?, kilometros = ?, cilindrada = ?
+                        'UPDATE vehiculos SET tipo = ?, patente = ?, id_marca = ?, id_modelo = ?, marca_otra = ?,
+                            modelo_otro = ?, modelo = ?, anio = ?, kilometros = ?, cilindrada = ?
                          WHERE id_vehiculo = ? AND id_cliente = ?'
-                    )->execute([$datos['tipo'], $datos['patente'], $datos['modelo'], $datos['anio'],
-                        $datos['kilometros'], $datos['cilindrada'], $idPost, $idUsuario]);
+                    )->execute([...$columnas, $idPost, $idUsuario]);
                     flash_set('Vehículo actualizado.');
                 } else {
                     $pdo->prepare(
-                        'INSERT INTO vehiculos (id_cliente, tipo, patente, modelo, anio, kilometros, cilindrada)
-                         VALUES (?, ?, ?, ?, ?, ?, ?)'
-                    )->execute([$idUsuario, $datos['tipo'], $datos['patente'], $datos['modelo'],
-                        $datos['anio'], $datos['kilometros'], $datos['cilindrada']]);
+                        'INSERT INTO vehiculos (id_cliente, tipo, patente, id_marca, id_modelo, marca_otra,
+                            modelo_otro, modelo, anio, kilometros, cilindrada)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                    )->execute([$idUsuario, ...$columnas]);
                     flash_set('Vehículo agregado.');
                 }
                 header('Location: vehiculos.php');
@@ -90,7 +95,10 @@ $idEdicion = $_SERVER['REQUEST_METHOD'] === 'POST'
     ? (int) ($_POST['id_vehiculo'] ?? 0)
     : (int) ($_GET['id'] ?? 0);
 
-$valores = ['tipo' => 'auto', 'patente' => '', 'marca' => '', 'modelo' => '', 'anio' => '', 'kilometros' => '', 'cilindrada' => ''];
+$valores = [
+    'tipo' => 'auto', 'patente' => '', 'marca_id' => '', 'marca_otra' => '', 'modelo_id' => '',
+    'modelo_otro' => '', 'anio' => '', 'kilometros' => '', 'cilindrada' => '',
+];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     foreach (array_keys($valores) as $campo) {
@@ -102,18 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errores[] = 'Vehículo no encontrado.';
         $idEdicion = 0;
     } else {
-        $valores['tipo'] = $actual['tipo'];
-        $valores['patente'] = $actual['patente'];
-        $valores['anio'] = (string) $actual['anio'];
-        $valores['kilometros'] = (string) $actual['kilometros'];
-        $valores['cilindrada'] = (string) ($actual['cilindrada'] ?? '');
-        if ($actual['tipo'] === 'moto') {
-            [$marca, $modelo] = array_pad(explode(' ', $actual['modelo'], 2), 2, '');
-            $valores['marca'] = $marca;
-            $valores['modelo'] = $modelo;
-        } else {
-            $valores['modelo'] = $actual['modelo'];
-        }
+        $valores = valores_formulario_vehiculo($actual);
     }
 }
 
@@ -122,6 +119,7 @@ $stmt->execute([$idUsuario]);
 $misVehiculos = $stmt->fetchAll();
 
 $anioMax = (int) date('Y') + 1;
+$catalogo = catalogo_vehiculos($pdo);
 
 inicio_html('Mis vehículos');
 ?>
@@ -164,60 +162,7 @@ inicio_html('Mis vehículos');
     <input type="hidden" name="accion" value="guardar">
     <input type="hidden" name="id_vehiculo" value="<?= $idEdicion ?>">
 
-    <fieldset class="tipo completo">
-      <legend>Tipo de vehículo</legend>
-      <label>
-        <input type="radio" name="tipo" value="auto" <?= $valores['tipo'] !== 'moto' ? 'checked' : '' ?>>
-        Auto
-      </label>
-      <label>
-        <input type="radio" name="tipo" value="moto" <?= $valores['tipo'] === 'moto' ? 'checked' : '' ?>>
-        Moto
-      </label>
-    </fieldset>
-
-    <label class="campo">
-      Patente
-      <input type="text" name="patente" id="patente" maxlength="10"
-             value="<?= htmlspecialchars($valores['patente']) ?>" placeholder="AB123CD">
-      <small id="ayuda-patente"></small>
-    </label>
-
-    <div data-solo="auto" class="grupo">
-      <label class="campo">
-        Modelo
-        <input type="text" name="modelo" maxlength="100"
-               value="<?= htmlspecialchars($valores['tipo'] !== 'moto' ? $valores['modelo'] : '') ?>"
-               placeholder="VW Gol 1.6">
-      </label>
-    </div>
-
-    <div data-solo="moto" class="grupo">
-      <label class="campo">
-        Marca
-        <input type="text" name="marca" maxlength="50" value="<?= htmlspecialchars($valores['marca']) ?>" placeholder="Honda">
-      </label>
-      <label class="campo">
-        Modelo
-        <input type="text" name="modelo" maxlength="50"
-               value="<?= htmlspecialchars($valores['tipo'] === 'moto' ? $valores['modelo'] : '') ?>"
-               placeholder="Wave 110">
-      </label>
-      <label class="campo">
-        Cilindrada (cc)
-        <input type="number" name="cilindrada" min="50" max="3000" value="<?= htmlspecialchars($valores['cilindrada']) ?>">
-      </label>
-    </div>
-
-    <label class="campo">
-      Año
-      <input type="number" name="anio" min="1950" max="<?= $anioMax ?>" value="<?= htmlspecialchars($valores['anio']) ?>">
-    </label>
-
-    <label class="campo">
-      Kilómetros
-      <input type="number" name="kilometros" min="0" value="<?= htmlspecialchars($valores['kilometros']) ?>">
-    </label>
+    <?php campos_vehiculo($anioMax); ?>
 
     <div class="completo" style="display:flex; gap:12px; flex-wrap:wrap;">
       <button type="submit" class="btn btn-grande"><?= $idEdicion > 0 ? 'Guardar cambios' : 'Agregar vehículo' ?></button>
@@ -228,33 +173,15 @@ inicio_html('Mis vehículos');
   </form>
 </section>
 
+<script type="application/json" id="catalogo"><?= json_encode($catalogo, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+<script type="application/json" id="inicial"><?= json_encode($valores, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
+<script src="assets/vehiculo.js"></script>
 <script>
-(() => {
-    const form = document.getElementById('form-vehiculo');
-    const ayuda = document.getElementById('ayuda-patente');
-    const textoAyuda = {
-        auto: 'Auto: AB123CD o ABC123',
-        moto: 'Moto: A123BCD o 123BCD',
-    };
-
-    // Muestra los campos del tipo elegido. Los ocultos se deshabilitan para que no se envíen.
-    function mostrarTipo() {
-        const tipo = form.querySelector('input[name="tipo"]:checked').value;
-        form.querySelectorAll('[data-solo]').forEach((bloque) => {
-            const activo = bloque.dataset.solo === tipo;
-            bloque.hidden = !activo;
-            bloque.querySelectorAll('input').forEach((input) => {
-                input.disabled = !activo;
-            });
-        });
-        ayuda.textContent = textoAyuda[tipo];
-    }
-
-    form.querySelectorAll('input[name="tipo"]').forEach((radio) => {
-        radio.addEventListener('change', mostrarTipo);
-    });
-    mostrarTipo();
-})();
+    Vehiculo.iniciar(
+        document.getElementById('form-vehiculo'),
+        JSON.parse(document.getElementById('catalogo').textContent),
+        JSON.parse(document.getElementById('inicial').textContent)
+    );
 </script>
 <?php
 fin_html();
