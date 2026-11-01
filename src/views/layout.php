@@ -21,7 +21,10 @@ function inicio_html(string $titulo, string $extraHead = ''): void
     <a class="marca" href="<?= $logueado ? 'panel.php' : 'login.php' ?>">TALLER GÓMEZ</a>
 
     <?php if ($logueado): ?>
-      <nav class="menu">
+      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="menu-principal" aria-label="Abrir menú">
+        <span></span><span></span><span></span>
+      </button>
+      <nav class="menu" id="menu-principal">
         <a href="panel.php">Inicio</a>
         <?php if ($rol === 'cliente'): ?>
           <a href="turno_nuevo.php">Pedir turno</a>
@@ -44,6 +47,17 @@ function inicio_html(string $titulo, string $extraHead = ''): void
       </form>
     <?php endif; ?>
   </header>
+  <script>
+    // Menú para teléfonos: abre y cierra la lista de opciones
+    document.querySelectorAll('.menu-toggle').forEach((boton) => {
+      boton.addEventListener('click', () => {
+        const barra = boton.closest('.barra');
+        const abierta = barra.classList.toggle('abierta');
+        boton.setAttribute('aria-expanded', String(abierta));
+        boton.setAttribute('aria-label', abierta ? 'Cerrar menú' : 'Abrir menú');
+      });
+    });
+  </script>
 
   <main class="contenedor">
     <?php

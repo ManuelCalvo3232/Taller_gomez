@@ -240,3 +240,39 @@ a.item { transition: border-left-color .15s; }
 a.item:hover { border-left-color: var(--rojo); }
 .flecha { color: var(--gris-medio); font-size: 1.4rem; font-weight: 800; transition: color .15s, transform .15s; }
 a.item:hover .flecha { color: var(--rojo); transform: translateX(4px); }
+
+/* Menú hamburguesa: solo en pantallas chicas */
+.menu-toggle {
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  background: none;
+  border: 0;
+  padding: 6px;
+  cursor: pointer;
+  order: 2;
+}
+.menu-toggle span {
+  display: block;
+  width: 24px;
+  height: 2px;
+  background: var(--blanco);
+  transition: transform .2s, opacity .2s;
+}
+@media (max-width: 640px) {
+  .barra { flex-wrap: wrap; }
+  .salir { order: 1; }
+  .menu-toggle { display: flex; }
+  .menu {
+    display: none;
+    order: 3;
+    width: 100%;
+    flex-direction: column;
+    gap: 0;
+  }
+  .menu a { padding: 12px 0; border-top: 1px solid rgba(255, 255, 255, .15); }
+  .barra.abierta .menu { display: flex; }
+  .barra.abierta .menu-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+  .barra.abierta .menu-toggle span:nth-child(2) { opacity: 0; }
+  .barra.abierta .menu-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+}

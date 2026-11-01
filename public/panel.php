@@ -26,9 +26,21 @@ $opciones = [
     ],
 ];
 
+// Para el mecánico: cuántos repuestos están por debajo del mínimo
+$repuestosBajos = null;
+if ($rol === 'mecanico') {
+    require_once __DIR__ . '/../src/config/database.php';
+    $repuestosBajos = (int) conectar()->query('SELECT COUNT(*) FROM repuestos WHERE stock <= stock_minimo')->fetchColumn();
+}
+
 inicio_html('Panel');
 ?>
   <h1>Hola, <?= htmlspecialchars($nombre) ?></h1>
+  <?php if ($repuestosBajos > 0): ?>
+    <a href="stock.php" class="alerta alerta-error" style="display:block; text-decoration:none;">
+      <?= $repuestosBajos ?> repuesto<?= $repuestosBajos === 1 ? '' : 's' ?> con stock bajo · Ver stock
+    </a>
+  <?php endif; ?>
 
   <div class="lista">
     <?php foreach ($opciones[$rol] ?? [] as [$titulo, $detalle, $url]): ?>
