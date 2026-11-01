@@ -32,7 +32,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Misma respuesta exista o no el email, para no revelar qué cuentas hay
     flash_set('Si el email está registrado y sin verificar, te enviamos un nuevo enlace.');
-    header('Location: login.php');
+    header('Location: login');
     exit;
 }
 
@@ -42,7 +42,7 @@ inicio_html('Reenviar verificación');
     <div class="tarjeta destacada">
       <h1>Reenviar verificación</h1>
       <p>Ingresá el email de tu cuenta y te enviamos un nuevo enlace.</p>
-      <form method="POST" action="reenviar_verificacion.php" class="formulario">
+      <form method="POST" action="reenviar_verificacion" class="formulario">
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
         <label class="campo completo">Email
           <input type="email" name="email" maxlength="150" value="<?= htmlspecialchars($email) ?>" required>

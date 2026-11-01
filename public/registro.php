@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             flash_set($enviado
                 ? 'Cuenta creada. Te enviamos un mail para confirmar tu dirección.'
                 : 'Cuenta creada, pero no pudimos enviar el mail de confirmación. Pedí uno nuevo desde "Reenviar verificación".');
-            header('Location: login.php');
+            header('Location: login');
             exit;
         } catch (PDOException $e) {
             if ($pdo !== null && $pdo->inTransaction()) {
@@ -76,7 +76,7 @@ inicio_html('Crear cuenta');
       <h1>Crear cuenta</h1>
       <?php mostrar_mensajes('', $errores); ?>
 
-      <form method="POST" action="registro.php" class="formulario">
+      <form method="POST" action="registro" class="formulario">
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
         <label class="campo">Nombre(s)
           <input type="text" name="nombre" maxlength="100" value="<?= htmlspecialchars($nombre) ?>" required>
@@ -96,7 +96,7 @@ inicio_html('Crear cuenta');
         </div>
       </form>
 
-      <p style="margin-top:16px">¿Ya tenés cuenta? <a href="login.php">Iniciar sesión</a></p>
+      <p style="margin-top:16px">¿Ya tenés cuenta? <a href="login">Iniciar sesión</a></p>
     </div>
   </div>
 <?php

@@ -27,7 +27,7 @@ function crear_token_verificacion(PDO $pdo, int $idUsuario): string
 function enviar_verificacion_mail(string $nombre, string $email, string $token): bool
 {
     $appUrl = rtrim(getenv('APP_URL') ?: 'http://localhost:8000', '/');
-    $enlace = htmlspecialchars($appUrl . '/verificar.php?token=' . $token, ENT_QUOTES);
+    $enlace = htmlspecialchars($appUrl . '/verificar?token=' . $token, ENT_QUOTES);
     $nombreSeguro = htmlspecialchars($nombre, ENT_QUOTES);
 
     $html = '<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#F2F2F2;padding:24px;">'

@@ -113,7 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 $pdo->commit();
                 flash_set('Repuesto agregado.');
-                header('Location: stock.php?id=' . $idNuevo);
+                header('Location: stock?id=' . $idNuevo);
                 exit;
             }
         }
@@ -128,7 +128,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      WHERE id_repuesto = ?'
                 )->execute([$datos['nombre'], $datos['marca_vehiculo'], $datos['categoria'], $datos['precio'], $datos['stock_minimo'], $id]);
                 flash_set('Repuesto actualizado.');
-                header('Location: stock.php?id=' . $id);
+                header('Location: stock?id=' . $id);
                 exit;
             }
         }
@@ -138,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!$bajos) {
                 flash_set('No hay repuestos con stock bajo.');
-                header('Location: stock.php');
+                header('Location: stock');
                 exit;
             }
 
@@ -166,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare('INSERT INTO alertas_stock (id_usuario, cantidad_repuestos) VALUES (?, ?)')
                     ->execute([$idUsuario, count($bajos)]);
                 flash_set('Alerta enviada al administrador.');
-                header('Location: stock.php');
+                header('Location: stock');
                 exit;
             }
         }
@@ -191,7 +191,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare('INSERT INTO proveedores (nombre, telefono, email, cuit) VALUES (?, ?, ?, ?)')
                     ->execute([$nombre, $telefono ?: null, $email ?: null, $cuit ?: null]);
                 flash_set('Proveedor agregado.');
-                header('Location: stock.php?vista=proveedores');
+                header('Location: stock?vista=proveedores');
                 exit;
             }
         }
@@ -201,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare('DELETE FROM proveedores WHERE id_proveedor = ?')
                     ->execute([(int) ($_POST['id_proveedor'] ?? 0)]);
                 flash_set('Proveedor eliminado.');
-                header('Location: stock.php?vista=proveedores');
+                header('Location: stock?vista=proveedores');
                 exit;
             } catch (PDOException $e) {
                 // Con compras registradas no se borra, para no perder el historial
@@ -230,7 +230,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (!$errores) {
                 registrar_movimiento($pdo, $id, $tipo, (int) $cantidad, $costo === false ? null : $costo, $idProveedor, $motivo, $idUsuario);
                 flash_set('Movimiento registrado.');
-                header('Location: stock.php?id=' . $id);
+                header('Location: stock?id=' . $id);
                 exit;
             }
         }
@@ -311,9 +311,9 @@ inicio_html('Stock de repuestos');
 <?php mostrar_mensajes($mensaje, $errores); ?>
 
 <p style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px">
-  <a class="btn <?= $vista === 'repuestos' ? 'btn-oscuro' : 'btn-outline' ?>" href="stock.php">Repuestos</a>
+  <a class="btn <?= $vista === 'repuestos' ? 'btn-oscuro' : 'btn-outline' ?>" href="stock">Repuestos</a>
   <?php if ($esAdmin): ?>
-    <a class="btn <?= $vista === 'proveedores' ? 'btn-oscuro' : 'btn-outline' ?>" href="stock.php?vista=proveedores">Proveedores</a>
+    <a class="btn <?= $vista === 'proveedores' ? 'btn-oscuro' : 'btn-outline' ?>" href="stock?vista=proveedores">Proveedores</a>
   <?php endif; ?>
 </p>
 
@@ -332,7 +332,7 @@ inicio_html('Stock de repuestos');
             · CUIT <?= htmlspecialchars($pr['cuit'] ?? '—') ?>
           </div>
         </div>
-        <form method="POST" action="stock.php" onsubmit="return confirm('¿Eliminar este proveedor?');">
+        <form method="POST" action="stock" onsubmit="return confirm('¿Eliminar este proveedor?');">
           <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
           <input type="hidden" name="accion" value="eliminar_proveedor">
           <input type="hidden" name="id_proveedor" value="<?= (int) $pr['id_proveedor'] ?>">
@@ -344,7 +344,7 @@ inicio_html('Stock de repuestos');
 
   <section class="tarjeta" style="margin-top:24px">
     <h2>Agregar proveedor</h2>
-    <form method="POST" action="stock.php" class="formulario">
+    <form method="POST" action="stock" class="formulario">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="accion" value="alta_proveedor">
 
@@ -367,7 +367,7 @@ inicio_html('Stock de repuestos');
   </section>
 
 <?php elseif ($detalle): ?>
-  <p><a href="stock.php">← Volver al listado</a></p>
+  <p><a href="stock">← Volver al listado</a></p>
 
   <?php [$gananciaPesos, $gananciaMargen] = ganancia_texto($detalle); ?>
   <section class="tarjeta destacada">
@@ -386,7 +386,7 @@ inicio_html('Stock de repuestos');
   <?php if ($esAdmin): ?>
   <section class="tarjeta" style="margin-top:20px">
     <h2>Registrar movimiento</h2>
-    <form method="POST" action="stock.php" class="formulario" id="form-mov">
+    <form method="POST" action="stock" class="formulario" id="form-mov">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="accion" value="movimiento">
       <input type="hidden" name="id_repuesto" value="<?= (int) $detalle['id_repuesto'] ?>">
@@ -423,7 +423,7 @@ inicio_html('Stock de repuestos');
 
   <section class="tarjeta" style="margin-top:20px">
     <h2>Editar datos</h2>
-    <form method="POST" action="stock.php" class="formulario">
+    <form method="POST" action="stock" class="formulario">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="accion" value="editar">
       <input type="hidden" name="id_repuesto" value="<?= (int) $detalle['id_repuesto'] ?>">
@@ -493,7 +493,7 @@ inicio_html('Stock de repuestos');
 
   <?php endif; ?>
 <?php else: ?>
-  <form method="GET" action="stock.php" class="formulario" style="margin-bottom:16px">
+  <form method="GET" action="stock" class="formulario" style="margin-bottom:16px">
     <label class="campo completo">Buscar
       <input type="search" name="q" value="<?= htmlspecialchars($busqueda) ?>" placeholder="Nombre o marca de vehículo">
     </label>
@@ -501,7 +501,7 @@ inicio_html('Stock de repuestos');
 
   <?php $cantBajos = count(array_filter($listado, fn ($r) => (int) $r['stock'] <= (int) $r['stock_minimo'])); ?>
 
-  <form method="POST" action="stock.php" style="margin-bottom:16px">
+  <form method="POST" action="stock" style="margin-bottom:16px">
     <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
     <input type="hidden" name="accion" value="alerta_stock">
     <button type="submit" class="btn btn-outline" <?= $cantBajos ? '' : 'disabled' ?>>
@@ -537,7 +537,7 @@ inicio_html('Stock de repuestos');
             <?php if ($esAdmin): ?>
               <td class="num"><?= pesos_fmt($gPesos) ?> <span class="detalle">(<?= number_format($gMargen, 0, ',', '.') ?>%)</span></td>
             <?php endif; ?>
-            <td><a href="stock.php?id=<?= (int) $r['id_repuesto'] ?>">Ver</a></td>
+            <td><a href="stock?id=<?= (int) $r['id_repuesto'] ?>">Ver</a></td>
           </tr>
         <?php endforeach; ?>
         <?php if (!$listado): ?>
@@ -550,7 +550,7 @@ inicio_html('Stock de repuestos');
   <?php if ($esAdmin): ?>
   <section class="tarjeta" style="margin-top:24px">
     <h2>Agregar repuesto</h2>
-    <form method="POST" action="stock.php" class="formulario">
+    <form method="POST" action="stock" class="formulario">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="accion" value="alta">
 

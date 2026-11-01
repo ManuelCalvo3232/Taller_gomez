@@ -7,7 +7,7 @@ require __DIR__ . '/../src/integraciones/mercadopago.php';
 requerir_rol('cliente');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: presupuestos.php');
+    header('Location: presupuestos');
     exit;
 }
 csrf_verificar();
@@ -33,7 +33,7 @@ $presupuesto = $stmt->fetch();
 
 if (!$presupuesto) {
     flash_set('Este presupuesto no se puede pagar.');
-    header('Location: presupuestos.php');
+    header('Location: presupuestos');
     exit;
 }
 
@@ -56,6 +56,6 @@ try {
 } catch (RuntimeException $e) {
     error_log('pagar: ' . $e->getMessage());
     flash_set('No pudimos iniciar el pago. Intentá de nuevo más tarde.');
-    header('Location: presupuestos.php');
+    header('Location: presupuestos');
     exit;
 }

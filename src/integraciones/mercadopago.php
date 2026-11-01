@@ -51,12 +51,12 @@ function mp_crear_preferencia(int $idPago, string $titulo, float $monto): array
         ]],
         'external_reference' => (string) $idPago,
         'back_urls' => [
-            'success' => "$appUrl/pago_retorno.php",
-            'failure' => "$appUrl/pago_retorno.php",
-            'pending' => "$appUrl/pago_retorno.php",
+            'success' => "$appUrl/pago_retorno",
+            'failure' => "$appUrl/pago_retorno",
+            'pending' => "$appUrl/pago_retorno",
         ],
         'auto_return' => 'approved',
-        'notification_url' => "$appUrl/webhook_pagos.php",
+        'notification_url' => "$appUrl/webhook_pagos",
     ]);
 }
 

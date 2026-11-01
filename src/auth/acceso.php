@@ -8,7 +8,7 @@ require_once __DIR__ . '/csrf.php';
 function requerir_login(): void
 {
     if (!isset($_SESSION['usuario_id'])) {
-        header('Location: login.php');
+        header('Location: login');
         exit;
     }
 }

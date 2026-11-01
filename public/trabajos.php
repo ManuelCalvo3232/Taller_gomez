@@ -45,7 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // PRG: si todo salió bien, redirigir para que recargar no repita la acción
     if ($mensaje !== '' && empty($errores)) {
         flash_set($mensaje);
-        header('Location: trabajos.php');
+        header('Location: trabajos');
         exit;
     }
 }
@@ -97,7 +97,7 @@ inicio_html('Trabajos');
             Turno: <?= htmlspecialchars($t['fecha_hora']) ?>
           </div>
         </div>
-        <form method="POST" action="trabajos.php">
+        <form method="POST" action="trabajos">
           <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
           <input type="hidden" name="id_trabajo" value="<?= (int) $t['id_trabajo'] ?>">
           <button type="submit" class="btn">Asignarme</button>
@@ -118,7 +118,7 @@ inicio_html('Trabajos');
           <div class="detalle">Dueño: <?= htmlspecialchars($t['cliente']) ?></div>
           <div style="margin-top:6px"><?= badge_estado($t['estado']) ?></div>
         </div>
-        <a class="btn btn-outline" href="trabajo.php?id=<?= (int) $t['id_trabajo'] ?>">Ver trabajo</a>
+        <a class="btn btn-outline" href="trabajo?id=<?= (int) $t['id_trabajo'] ?>">Ver trabajo</a>
       </div>
     <?php endforeach; ?>
   </div>

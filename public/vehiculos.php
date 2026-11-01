@@ -34,7 +34,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $pdo->prepare('DELETE FROM vehiculos WHERE id_vehiculo = ? AND id_cliente = ?')
                     ->execute([$idPost, $idUsuario]);
                 flash_set('Vehículo eliminado.');
-                header('Location: vehiculos.php');
+                header('Location: vehiculos');
                 exit;
             } catch (PDOException $e) {
                 if ($e->getCode() === '23000') {
@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     )->execute([$idUsuario, ...$columnas]);
                     flash_set('Vehículo agregado.');
                 }
-                header('Location: vehiculos.php');
+                header('Location: vehiculos');
                 exit;
             } catch (DomainException $e) {
                 $errores[] = $e->getMessage();
@@ -142,8 +142,8 @@ inicio_html('Mis vehículos');
         </div>
       </div>
       <div class="acciones">
-        <a class="btn btn-outline" href="vehiculos.php?id=<?= (int) $vehiculo['id_vehiculo'] ?>">Editar</a>
-        <form method="POST" action="vehiculos.php" onsubmit="return confirm('¿Eliminar este vehículo?');">
+        <a class="btn btn-outline" href="vehiculos?id=<?= (int) $vehiculo['id_vehiculo'] ?>">Editar</a>
+        <form method="POST" action="vehiculos" onsubmit="return confirm('¿Eliminar este vehículo?');">
           <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
           <input type="hidden" name="accion" value="eliminar">
           <input type="hidden" name="id_vehiculo" value="<?= (int) $vehiculo['id_vehiculo'] ?>">
@@ -157,7 +157,7 @@ inicio_html('Mis vehículos');
 <section class="tarjeta" style="margin-top:24px">
   <h2><?= $idEdicion > 0 ? 'Editar vehículo' : 'Agregar vehículo' ?></h2>
 
-  <form method="post" action="vehiculos.php" id="form-vehiculo" class="formulario" novalidate>
+  <form method="post" action="vehiculos" id="form-vehiculo" class="formulario" novalidate>
     <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
     <input type="hidden" name="accion" value="guardar">
     <input type="hidden" name="id_vehiculo" value="<?= $idEdicion ?>">
@@ -167,7 +167,7 @@ inicio_html('Mis vehículos');
     <div class="completo" style="display:flex; gap:12px; flex-wrap:wrap;">
       <button type="submit" class="btn btn-grande"><?= $idEdicion > 0 ? 'Guardar cambios' : 'Agregar vehículo' ?></button>
       <?php if ($idEdicion > 0): ?>
-        <a class="btn btn-outline" href="vehiculos.php">Cancelar</a>
+        <a class="btn btn-outline" href="vehiculos">Cancelar</a>
       <?php endif; ?>
     </div>
   </form>

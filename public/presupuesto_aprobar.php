@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         // PRG: después de decidir, el token deja de estar en la URL
-        header('Location: presupuesto_aprobar.php?resultado=' . $nuevo);
+        header('Location: presupuesto_aprobar?resultado=' . $nuevo);
         exit;
     } catch (DomainException $e) {
         if ($pdo->inTransaction()) {
@@ -145,8 +145,8 @@ mostrar_mensajes('', $error ? [$error] : []);
     <section class="tarjeta destacada">
         <h1>¡Presupuesto aprobado!</h1>
         <p>Gracias. El taller va a seguir con tu vehículo.</p>
-        <p>Podés pagarlo online desde <a href="presupuestos.php">Mis presupuestos</a> (te pide iniciar sesión), o en el taller con efectivo o transferencia.</p>
-        <p><a class="btn btn-grande" href="presupuestos.php">Ir a pagar</a></p>
+        <p>Podés pagarlo online desde <a href="presupuestos">Mis presupuestos</a> (te pide iniciar sesión), o en el taller con efectivo o transferencia.</p>
+        <p><a class="btn btn-grande" href="presupuestos">Ir a pagar</a></p>
     </section>
 
 <?php elseif ($resultado === 'rechazado'): ?>
@@ -190,7 +190,7 @@ mostrar_mensajes('', $error ? [$error] : []);
 
         <p class="total">Total: $ <?= number_format((float) $datos['total'], 2, ',', '.') ?></p>
 
-        <form method="post" action="presupuesto_aprobar.php" class="acciones">
+        <form method="post" action="presupuesto_aprobar" class="acciones">
             <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
             <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
             <button type="submit" name="accion" value="aprobar" class="btn btn-grande">Aprobar</button>

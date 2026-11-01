@@ -4,7 +4,7 @@ require __DIR__ . '/../src/auth/csrf.php';
 
 // Cerrar sesión solo por POST con token CSRF: un enlace de otra página no debería poder cerrarla
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Location: panel.php');
+    header('Location: panel');
     exit;
 }
 csrf_verificar();
@@ -33,5 +33,5 @@ setcookie(session_name(), '', [
 ]);
 session_destroy();
 
-header('Location: login.php');
+header('Location: login');
 exit;

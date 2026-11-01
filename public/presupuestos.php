@@ -98,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // PRG: si todo salió bien, redirigir para que recargar no repita la acción
     if ($mensaje !== '' && empty($errores)) {
         flash_set($mensaje);
-        header('Location: presupuestos.php');
+        header('Location: presupuestos');
         exit;
     }
 }
@@ -167,13 +167,13 @@ inicio_html('Mis presupuestos');
 
       <?php if ($p['estado'] === 'enviado'): ?>
         <div class="acciones">
-          <form method="POST" action="presupuestos.php">
+          <form method="POST" action="presupuestos">
             <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
             <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">
             <input type="hidden" name="accion" value="aprobar">
             <button type="submit" class="btn btn-grande">Aprobar</button>
           </form>
-          <form method="POST" action="presupuestos.php">
+          <form method="POST" action="presupuestos">
             <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
             <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">
             <input type="hidden" name="accion" value="rechazar">
@@ -191,7 +191,7 @@ inicio_html('Mis presupuestos');
             <?php endif; ?>
           <?php else: ?>
             <span class="detalle vacio">Podés pagarlo acá o en el taller con efectivo o transferencia.</span>
-            <form method="POST" action="pagar.php">
+            <form method="POST" action="pagar">
               <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
               <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">
               <button type="submit" class="btn btn-grande">Pagar</button>

@@ -61,7 +61,7 @@ router.post('/:id/notificar', requerirRol('mecanico'), async (req, res, next) =>
       [hash, idPresupuesto, DIAS_VALIDEZ]
     );
 
-    const urlAprobar = `${appUrl}/presupuesto_aprobar.php?token=${token}`;
+    const urlAprobar = `${appUrl}/presupuesto_aprobar?token=${token}`;
 
     const enviado = await enviarMail({
       idTrabajo: presupuesto.id_trabajo,

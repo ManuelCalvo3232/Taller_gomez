@@ -18,30 +18,30 @@ function inicio_html(string $titulo, string $extraHead = ''): void
 </head>
 <body>
   <header class="barra">
-    <a class="marca" href="<?= $logueado ? 'panel.php' : 'login.php' ?>">TALLER GÓMEZ</a>
+    <a class="marca" href="<?= $logueado ? 'panel' : 'login' ?>">TALLER GÓMEZ</a>
 
     <?php if ($logueado): ?>
       <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="menu-principal" aria-label="Abrir menú">
         <span></span><span></span><span></span>
       </button>
       <nav class="menu" id="menu-principal">
-        <a href="panel.php">Inicio</a>
+        <a href="panel">Inicio</a>
         <?php if ($rol === 'cliente'): ?>
-          <a href="turno_nuevo.php">Pedir turno</a>
-          <a href="presupuestos.php">Presupuestos</a>
-          <a href="vehiculos.php">Vehículos</a>
-          <a href="historial.php">Historial</a>
-          <a href="perfil.php">Mi perfil</a>
+          <a href="turno_nuevo">Pedir turno</a>
+          <a href="presupuestos">Presupuestos</a>
+          <a href="vehiculos">Vehículos</a>
+          <a href="historial">Historial</a>
+          <a href="perfil">Mi perfil</a>
         <?php elseif ($rol === 'mecanico'): ?>
-          <a href="trabajos.php">Trabajos</a>
-          <a href="stock.php">Repuestos</a>
+          <a href="trabajos">Trabajos</a>
+          <a href="stock">Repuestos</a>
         <?php elseif ($rol === 'admin'): ?>
-          <a href="dashboard.php">Dashboard</a>
-          <a href="stock.php">Stock</a>
+          <a href="dashboard">Dashboard</a>
+          <a href="stock">Stock</a>
         <?php endif; ?>
       </nav>
 
-      <form method="POST" action="logout.php" class="salir">
+      <form method="POST" action="logout" class="salir">
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
         <button type="submit" class="btn-link">Salir</button>
       </form>
@@ -86,7 +86,7 @@ function mostrar_mensajes(string $mensaje, array $errores): void
 // Enlace de vuelta al panel
 function link_panel(): void
 {
-    echo '<p><a href="panel.php">← Volver al panel</a></p>';
+    echo '<p><a href="panel">← Volver al panel</a></p>';
 }
 
 // Badge con color según el estado del trabajo:

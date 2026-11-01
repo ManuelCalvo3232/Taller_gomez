@@ -217,7 +217,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($mensaje !== '' && empty($errores)) {
         flash_set($mensaje);
-        header('Location: trabajo.php?id=' . $idTrabajo);
+        header('Location: trabajo?id=' . $idTrabajo);
         exit;
     }
 
@@ -287,7 +287,7 @@ inicio_html('Trabajo #' . $idTrabajo);
     <?php if ($diagnostico): ?>
       <p><?= nl2br(htmlspecialchars($diagnostico)) ?></p>
     <?php endif; ?>
-    <form method="POST" action="trabajo.php?id=<?= (int) $idTrabajo ?>" class="formulario">
+    <form method="POST" action="trabajo?id=<?= (int) $idTrabajo ?>" class="formulario">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="accion" value="diagnostico">
       <input type="hidden" name="id_trabajo" value="<?= (int) $idTrabajo ?>">
@@ -302,7 +302,7 @@ inicio_html('Trabajo #' . $idTrabajo);
   <div class="tarjeta destacada">
     <h3>Presupuesto</h3>
     <p class="detalle">Completá hasta 5 ítems. Para repuestos elegí el producto (el precio sale del stock); para mano de obra, dejá el repuesto en "Mano de obra" y escribí el precio.</p>
-    <form method="POST" action="trabajo.php?id=<?= (int) $idTrabajo ?>">
+    <form method="POST" action="trabajo?id=<?= (int) $idTrabajo ?>">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
       <input type="hidden" name="accion" value="presupuesto">
       <input type="hidden" name="id_trabajo" value="<?= (int) $idTrabajo ?>">
@@ -356,7 +356,7 @@ inicio_html('Trabajo #' . $idTrabajo);
       <?php else: ?>
         <p class="detalle">Total a cobrar: <strong>$ <?= number_format($presupuestoAprobado['total'], 2, ',', '.') ?></strong>.
           Si el cliente paga en el taller, registralo acá. Si paga online, se marca solo.</p>
-        <form method="POST" action="trabajo.php?id=<?= (int) $idTrabajo ?>" class="formulario">
+        <form method="POST" action="trabajo?id=<?= (int) $idTrabajo ?>" class="formulario">
           <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
           <input type="hidden" name="accion" value="pago_presencial">
           <input type="hidden" name="id_trabajo" value="<?= (int) $idTrabajo ?>">
@@ -377,7 +377,7 @@ inicio_html('Trabajo #' . $idTrabajo);
     <div class="tarjeta destacada">
       <h3>Entrega</h3>
       <p class="detalle">El cliente aprobó el presupuesto. Cuando el vehículo esté terminado, marcalo como listo.</p>
-      <form method="POST" action="trabajo.php?id=<?= (int) $idTrabajo ?>">
+      <form method="POST" action="trabajo?id=<?= (int) $idTrabajo ?>">
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
         <input type="hidden" name="accion" value="listo">
         <input type="hidden" name="id_trabajo" value="<?= (int) $idTrabajo ?>">
@@ -386,6 +386,6 @@ inicio_html('Trabajo #' . $idTrabajo);
     </div>
   <?php endif; ?>
 
-  <p><a href="trabajos.php">← Volver a trabajos</a></p>
+  <p><a href="trabajos">← Volver a trabajos</a></p>
 <?php
 fin_html();

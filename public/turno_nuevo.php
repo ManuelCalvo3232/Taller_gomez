@@ -97,7 +97,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->commit();
 
             flash_set('Turno reservado. Te avisamos por mail cuando haya novedades.');
-            header('Location: panel.php');
+            header('Location: panel');
             exit;
         } catch (PDOException $e) {
             if ($pdo->inTransaction()) {
@@ -134,7 +134,7 @@ mostrar_mensajes('', $errores);
 <section class="tarjeta">
     <h1>Pedir turno</h1>
 
-    <form method="post" action="turno_nuevo.php" id="form-turno" class="formulario" novalidate>
+    <form method="post" action="turno_nuevo" id="form-turno" class="formulario" novalidate>
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
 
         <?php if ($vehiculosGuardados): ?>

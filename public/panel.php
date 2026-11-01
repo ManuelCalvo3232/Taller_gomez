@@ -32,19 +32,19 @@ if ($rol === 'cliente') {
 
 $opciones = [
     'cliente' => [
-        ['Pedir turno', 'Reservá el horario para tu vehículo', 'turno_nuevo.php'],
-        ['Mis presupuestos', 'Revisá y aprobá los presupuestos del taller', 'presupuestos.php'],
-        ['Mis vehículos', 'Agregá, editá o quitá tus autos y motos', 'vehiculos.php'],
-        ['Historial', 'Todos tus trabajos, con diagnóstico y total', 'historial.php'],
-        ['Mi perfil', 'Tus datos, teléfono y clave', 'perfil.php'],
+        ['Pedir turno', 'Reservá el horario para tu vehículo', 'turno_nuevo'],
+        ['Mis presupuestos', 'Revisá y aprobá los presupuestos del taller', 'presupuestos'],
+        ['Mis vehículos', 'Agregá, editá o quitá tus autos y motos', 'vehiculos'],
+        ['Historial', 'Todos tus trabajos, con diagnóstico y total', 'historial'],
+        ['Mi perfil', 'Tus datos, teléfono y clave', 'perfil'],
     ],
     'mecanico' => [
-        ['Trabajos', 'Asignate vehículos y cargá diagnósticos y presupuestos', 'trabajos.php'],
-        ['Repuestos del taller', 'Qué hay en stock y avisar si falta algo', 'stock.php'],
+        ['Trabajos', 'Asignate vehículos y cargá diagnósticos y presupuestos', 'trabajos'],
+        ['Repuestos del taller', 'Qué hay en stock y avisar si falta algo', 'stock'],
     ],
     'admin' => [
-        ['Dashboard', 'Caja, trabajos, stock e insights del taller', 'dashboard.php'],
-        ['Stock y proveedores', 'Repuestos, compras, costos, ganancia y proveedores', 'stock.php'],
+        ['Dashboard', 'Caja, trabajos, stock e insights del taller', 'dashboard'],
+        ['Stock y proveedores', 'Repuestos, compras, costos, ganancia y proveedores', 'stock'],
     ],
 ];
 
@@ -59,17 +59,17 @@ inicio_html('Panel');
 ?>
   <h1>Hola, <?= htmlspecialchars($nombre) ?></h1>
   <?php if ($sinTelefono): ?>
-    <a href="perfil.php" class="alerta alerta-error" style="display:block; text-decoration:none;">
+    <a href="perfil" class="alerta alerta-error" style="display:block; text-decoration:none;">
       Cargá tu teléfono en Mi perfil. Es la única forma en que el taller puede avisarte.
     </a>
   <?php endif; ?>
   <?php if ($pagosPendientes > 0): ?>
-    <a href="presupuestos.php" class="alerta alerta-error" style="display:block; text-decoration:none;">
+    <a href="presupuestos" class="alerta alerta-error" style="display:block; text-decoration:none;">
       Tenés <?= $pagosPendientes ?> presupuesto<?= $pagosPendientes === 1 ? '' : 's' ?> pendiente<?= $pagosPendientes === 1 ? '' : 's' ?> de pago · Ver presupuestos
     </a>
   <?php endif; ?>
   <?php if ($repuestosBajos > 0): ?>
-    <a href="stock.php" class="alerta alerta-error" style="display:block; text-decoration:none;">
+    <a href="stock" class="alerta alerta-error" style="display:block; text-decoration:none;">
       <?= $repuestosBajos ?> repuesto<?= $repuestosBajos === 1 ? '' : 's' ?> con stock bajo · Ver stock
     </a>
   <?php endif; ?>

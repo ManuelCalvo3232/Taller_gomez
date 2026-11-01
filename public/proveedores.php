@@ -1,5 +1,5 @@
 <?php
 
 // Los proveedores están dentro del panel de stock
-header('Location: stock.php?vista=proveedores');
+header('Location: stock?vista=proveedores');
 exit;

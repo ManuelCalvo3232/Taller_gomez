@@ -40,7 +40,7 @@ inicio_html('Resultado del pago');
       <h1>No encontramos ese pago</h1>
       <p>Revisá tus presupuestos para ver el estado.</p>
     <?php endif; ?>
-    <p><a href="presupuestos.php">Ir a mis presupuestos</a></p>
+    <p><a href="presupuestos">Ir a mis presupuestos</a></p>
   </section>
 <?php
 fin_html();

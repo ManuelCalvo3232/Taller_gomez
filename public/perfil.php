@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['nombre'] = $nombre;
 
             flash_set('Datos actualizados.');
-            header('Location: perfil.php');
+            header('Location: perfil');
             exit;
         }
 
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $_SESSION['api_token'] = $tokenApi;
             flash_set('Clave actualizada.');
-            header('Location: perfil.php');
+            header('Location: perfil');
             exit;
         }
     }
@@ -100,7 +100,7 @@ inicio_html('Mi perfil');
 
 <section class="tarjeta">
   <h2>Mis datos</h2>
-  <form method="POST" action="perfil.php" class="formulario">
+  <form method="POST" action="perfil" class="formulario">
     <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
     <input type="hidden" name="accion" value="datos">
 
@@ -129,7 +129,7 @@ inicio_html('Mi perfil');
 
 <section class="tarjeta" style="margin-top:24px">
   <h2>Cambiar clave</h2>
-  <form method="POST" action="perfil.php" class="formulario">
+  <form method="POST" action="perfil" class="formulario">
     <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
     <input type="hidden" name="accion" value="clave">
 

@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo->commit();
 
         flash_set('Cuenta verificada. Ya podés iniciar sesión.');
-        header('Location: login.php');
+        header('Location: login');
         exit;
     } catch (DomainException $e) {
         if ($pdo !== null && $pdo->inTransaction()) {
@@ -73,7 +73,7 @@ inicio_html('Verificar cuenta');
       <?php if ($puedeConfirmar): ?>
         <h1>Confirmá tu email</h1>
         <p>Hacé clic en el botón para activar tu cuenta.</p>
-        <form method="POST" action="verificar.php" class="formulario">
+        <form method="POST" action="verificar" class="formulario">
           <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
           <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
           <div class="completo">
@@ -83,7 +83,7 @@ inicio_html('Verificar cuenta');
       <?php else: ?>
         <h1>Enlace no válido</h1>
         <?php mostrar_mensajes('', $error ? [$error] : ['El enlace venció o ya se usó.']); ?>
-        <p><a href="reenviar_verificacion.php">Pedir un nuevo enlace</a></p>
+        <p><a href="reenviar_verificacion">Pedir un nuevo enlace</a></p>
       <?php endif; ?>
     </div>
   </div>

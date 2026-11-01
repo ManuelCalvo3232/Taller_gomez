@@ -7,7 +7,7 @@ require __DIR__ . '/../src/views/layout.php';
 
 // La sesión ya se inicia dentro de csrf.php
 if (isset($_SESSION['usuario_id'])) {
-    header('Location: panel.php');
+    header('Location: panel');
     exit;
 }
 
@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt->execute([hash('sha256', $tokenApi), $usuario['id_usuario']]);
                         $_SESSION['api_token'] = $tokenApi;
 
-                        header('Location: panel.php');
+                        header('Location: panel');
                         exit;
                     }
                 } else {
@@ -84,7 +84,7 @@ inicio_html('Iniciar sesión');
       <h1>Iniciar sesión</h1>
       <?php mostrar_mensajes($mensaje, $errores); ?>
 
-      <form method="POST" action="login.php" class="formulario">
+      <form method="POST" action="login" class="formulario">
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
         <label class="campo completo">Email
           <input type="email" name="email" value="<?= htmlspecialchars($email) ?>" required>
@@ -97,8 +97,8 @@ inicio_html('Iniciar sesión');
         </div>
       </form>
 
-      <p style="margin-top:16px">¿No tenés cuenta? <a href="registro.php">Registrate</a></p>
-      <p style="margin-top:8px">¿No te llegó el mail? <a href="reenviar_verificacion.php">Reenviar verificación</a></p>
+      <p style="margin-top:16px">¿No tenés cuenta? <a href="registro">Registrate</a></p>
+      <p style="margin-top:8px">¿No te llegó el mail? <a href="reenviar_verificacion">Reenviar verificación</a></p>
     </div>
   </div>
 <?php
