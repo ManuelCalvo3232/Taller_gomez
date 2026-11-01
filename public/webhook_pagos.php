@@ -1,6 +1,7 @@
 <?php
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/integraciones/mercadopago.php';
+require __DIR__ . '/../src/dominio/comprobante_pago.php';
 
 // Mercado Pago avisa acá cuando cambia un pago. El aviso solo dice qué pago cambió:
 // el estado real se consulta a la API, así que nadie puede marcar un pago como aprobado a mano.
@@ -43,8 +44,16 @@ try {
             $nuevoEstado = 'pendiente';
         }
 
-        $pdo->prepare('UPDATE pagos SET estado = ?, mp_payment_id = ? WHERE id_pago = ?')
-            ->execute([$nuevoEstado, (string) $idPago, $idLocal]);
+        // Un pago aprobado no vuelve a cambiar. Si Mercado Pago reenvía el aviso, no se cuenta de nuevo
+        $stmt = $pdo->prepare(
+            "UPDATE pagos SET estado = ?, mp_payment_id = ? WHERE id_pago = ? AND estado <> 'aprobado'"
+        );
+        $stmt->execute([$nuevoEstado, (string) $idPago, $idLocal]);
+
+        // El mail solo sale en el paso a aprobado (rowCount = 1 significa que la fila cambió)
+        if ($nuevoEstado === 'aprobado' && $stmt->rowCount() === 1) {
+            enviar_comprobante_pago($pdo, $idLocal, (string) $idPago);
+        }
     }
 
     http_response_code(200);
