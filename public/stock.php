@@ -68,7 +68,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($costoInicial === false || $costoInicial < 0) {
                         throw new DomainException('Indicá el costo unitario del stock inicial.');
                     }
-                    registrar_movimiento($pdo, $idNuevo, 'entrada', $stockInicial, $costoInicial, null, 'Stock inicial', $idUsuario);
+                    registrar_movimiento($pdo, $idNuevo, 'entrada', $stockInicial, $costoInicial,
+                        ($_POST['id_proveedor_inicial'] ?? '') !== '' ? (int) $_POST['id_proveedor_inicial'] : null,
+                        'Stock inicial', $idUsuario);
                 }
 
                 $pdo->commit();
@@ -327,6 +329,7 @@ inicio_html('Stock de repuestos');
             <option value="<?= (int) $pr['id_proveedor'] ?>"><?= htmlspecialchars($pr['nombre']) ?></option>
           <?php endforeach; ?>
         </select>
+        <?php if (!$proveedores): ?><small>Todavía no hay proveedores. Cargalos en la pestaña Proveedores.</small><?php endif; ?>
       </label>
       <label class="campo completo">Motivo
         <input type="text" name="motivo" maxlength="255" required placeholder="Compra factura 0001-123">
@@ -470,6 +473,15 @@ inicio_html('Stock de repuestos');
       </label>
       <label class="campo">Stock inicial
         <input type="number" name="stock_inicial" min="0" value="0">
+      </label>
+      <label class="campo">Proveedor del stock inicial
+        <select name="id_proveedor_inicial">
+          <option value="">Sin proveedor</option>
+          <?php foreach ($proveedores as $pr): ?>
+            <option value="<?= (int) $pr['id_proveedor'] ?>"><?= htmlspecialchars($pr['nombre']) ?></option>
+          <?php endforeach; ?>
+        </select>
+        <?php if (!$proveedores): ?><small>Todavía no hay proveedores. Cargalos en la pestaña Proveedores.</small><?php endif; ?>
       </label>
       <label class="campo">Costo unitario del stock inicial
         <input type="number" name="costo_inicial" min="0" step="0.01">
