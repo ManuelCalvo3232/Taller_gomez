@@ -1,8 +1,5 @@
 <?php
-require __DIR__ . '/../src/config/database.php';
 
-$pdo = conectar();
-echo "Conectado a la base<br>";
-
-$filas = $pdo->query("SELECT COUNT(*) AS total FROM usuarios")->fetchAll();
-echo "Usuarios en la tabla: " . $filas[0]['total'];
+// Entrada del sitio: el panel pide sesión y, si no hay, redirige al login
+header('Location: panel.php');
+exit;
