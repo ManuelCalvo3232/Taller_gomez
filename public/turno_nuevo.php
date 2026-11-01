@@ -146,6 +146,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Vehículos ya guardados del cliente, para completar el formulario con uno de ellos
+$stmt = $pdo->prepare('SELECT tipo, patente, modelo, anio, kilometros, cilindrada FROM vehiculos WHERE id_cliente = ? ORDER BY id_vehiculo');
+$stmt->execute([(int) $_SESSION['usuario_id']]);
+$vehiculosGuardados = array_map(function (array $v): array {
+    [$marca, $modeloCorto] = $v['tipo'] === 'moto'
+        ? array_pad(explode(' ', $v['modelo'], 2), 2, '')
+        : ['', ''];
+    return [
+        'tipo' => $v['tipo'],
+        'patente' => $v['patente'],
+        'modelo' => $v['modelo'],
+        'marca' => $marca,
+        'modelo_corto' => $modeloCorto,
+        'anio' => (string) $v['anio'],
+        'kilometros' => (string) $v['kilometros'],
+        'cilindrada' => (string) ($v['cilindrada'] ?? ''),
+    ];
+}, $stmt->fetchAll());
+
 $apiBase = htmlspecialchars($config['api_url'], ENT_QUOTES);
 inicio_html('Pedir turno', '<meta name="api-base" content="' . $apiBase . '">');
 mostrar_mensajes('', $errores);
@@ -156,6 +175,18 @@ mostrar_mensajes('', $errores);
 
     <form method="post" action="turno_nuevo.php" id="form-turno" class="formulario" novalidate>
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+
+        <?php if ($vehiculosGuardados): ?>
+        <label class="campo completo">Vehículo guardado
+            <select id="vehiculo-guardado">
+                <option value="">Cargar uno nuevo</option>
+                <?php foreach ($vehiculosGuardados as $i => $vg): ?>
+                    <option value="<?= $i ?>"><?= htmlspecialchars($vg['modelo'] . ' · ' . $vg['patente']) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <small>Elegí uno para completar los datos. Podés ajustarlos antes de reservar.</small>
+        </label>
+        <?php endif; ?>
 
         <fieldset class="tipo completo">
             <legend>¿Qué vehículo traés?</legend>
@@ -295,6 +326,27 @@ mostrar_mensajes('', $errores);
     form.querySelectorAll('input[name="tipo"]').forEach((radio) => {
         radio.addEventListener('change', mostrarTipo);
     });
+
+    // Datos de los vehículos guardados
+    const guardados = <?= json_encode($vehiculosGuardados, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const selectorGuardado = document.getElementById('vehiculo-guardado');
+    if (selectorGuardado) {
+        selectorGuardado.addEventListener('change', () => {
+            const v = guardados[selectorGuardado.value];
+            if (!v) {
+                return;
+            }
+            form.querySelector(`input[name="tipo"][value="${v.tipo}"]`).checked = true;
+            form.querySelector('[name="patente"]').value = v.patente;
+            form.querySelector('[data-solo="auto"] [name="modelo"]').value = v.tipo === 'auto' ? v.modelo : '';
+            form.querySelector('[data-solo="moto"] [name="marca"]').value = v.marca;
+            form.querySelector('[data-solo="moto"] [name="modelo"]').value = v.tipo === 'moto' ? v.modelo_corto : '';
+            form.querySelector('[data-solo="moto"] [name="cilindrada"]').value = v.cilindrada;
+            form.querySelector('[name="anio"]').value = v.anio;
+            form.querySelector('[name="kilometros"]').value = v.kilometros;
+            mostrarTipo();
+        });
+    }
     fecha.addEventListener('change', () => cargarHorarios(''));
 
     mostrarTipo();
