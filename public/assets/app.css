@@ -234,3 +234,9 @@ fieldset.tipo input[type="radio"] { accent-color: var(--rojo); width: 18px; heig
 .campo small { color: var(--gris-medio); font-weight: 400; }
 .grupo { display: contents; }
 [hidden] { display: none !important; }
+
+/* Tarjetas del panel: la flecha no compite con los botones de acción */
+a.item { transition: border-left-color .15s; }
+a.item:hover { border-left-color: var(--rojo); }
+.flecha { color: var(--gris-medio); font-size: 1.4rem; font-weight: 800; transition: color .15s, transform .15s; }
+a.item:hover .flecha { color: var(--rojo); transform: translateX(4px); }

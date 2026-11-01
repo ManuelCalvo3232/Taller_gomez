@@ -27,7 +27,6 @@ $opciones = [
 inicio_html('Panel');
 ?>
   <h1>Hola, <?= htmlspecialchars($nombre) ?></h1>
-  <p class="vacio">Sesión de <?= htmlspecialchars($rol) ?></p>
 
   <div class="lista">
     <?php foreach ($opciones[$rol] ?? [] as [$titulo, $detalle, $url]): ?>
@@ -36,7 +35,7 @@ inicio_html('Panel');
           <div class="titulo"><?= htmlspecialchars($titulo) ?></div>
           <div class="detalle"><?= htmlspecialchars($detalle) ?></div>
         </div>
-        <span class="btn">Entrar</span>
+        <span class="flecha" aria-hidden="true">&rarr;</span>
       </a>
     <?php endforeach; ?>
   </div>
