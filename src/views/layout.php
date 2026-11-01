@@ -26,6 +26,9 @@ function inicio_html(string $titulo, string $extraHead = ''): void
         <?php if ($rol === 'cliente'): ?>
           <a href="turno_nuevo.php">Pedir turno</a>
           <a href="presupuestos.php">Presupuestos</a>
+          <a href="vehiculos.php">Vehículos</a>
+          <a href="historial.php">Historial</a>
+          <a href="perfil.php">Mi perfil</a>
         <?php elseif ($rol === 'mecanico'): ?>
           <a href="trabajos.php">Trabajos</a>
         <?php elseif ($rol === 'admin'): ?>

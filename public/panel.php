@@ -12,6 +12,9 @@ $opciones = [
     'cliente' => [
         ['Pedir turno', 'Reservá el horario para tu vehículo', 'turno_nuevo.php'],
         ['Mis presupuestos', 'Revisá y aprobá los presupuestos del taller', 'presupuestos.php'],
+        ['Mis vehículos', 'Agregá, editá o quitá tus autos y motos', 'vehiculos.php'],
+        ['Historial', 'Todos tus trabajos, con diagnóstico y total', 'historial.php'],
+        ['Mi perfil', 'Tus datos, teléfono y clave', 'perfil.php'],
     ],
     'mecanico' => [
         ['Trabajos', 'Asignate vehículos y cargá diagnósticos y presupuestos', 'trabajos.php'],
