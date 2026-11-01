@@ -9,9 +9,15 @@ $nombre = $_SESSION['nombre'];
 $rol = $_SESSION['rol'];
 
 // Opciones según el rol: cada una apunta a una vista que se protege sola
+// Para el cliente: sin teléfono el taller no lo puede contactar
+$sinTelefono = false;
 // Para el cliente: presupuestos aprobados que todavía no están pagados
 $pagosPendientes = null;
 if ($rol === 'cliente') {
+    $stmt = conectar()->prepare('SELECT telefono FROM usuarios WHERE id_usuario = ?');
+    $stmt->execute([(int) $_SESSION['usuario_id']]);
+    $sinTelefono = trim((string) $stmt->fetchColumn()) === '';
+
     $stmt = conectar()->prepare(
         "SELECT COUNT(*) FROM presupuestos p
          JOIN trabajos t ON t.id_trabajo = p.id_trabajo
@@ -52,6 +58,11 @@ if ($rol === 'mecanico') {
 inicio_html('Panel');
 ?>
   <h1>Hola, <?= htmlspecialchars($nombre) ?></h1>
+  <?php if ($sinTelefono): ?>
+    <a href="perfil.php" class="alerta alerta-error" style="display:block; text-decoration:none;">
+      Cargá tu teléfono en Mi perfil. Es la única forma en que el taller puede avisarte.
+    </a>
+  <?php endif; ?>
   <?php if ($pagosPendientes > 0): ?>
     <a href="presupuestos.php" class="alerta alerta-error" style="display:block; text-decoration:none;">
       Tenés <?= $pagosPendientes ?> presupuesto<?= $pagosPendientes === 1 ? '' : 's' ?> pendiente<?= $pagosPendientes === 1 ? '' : 's' ?> de pago · Ver presupuestos
