@@ -176,18 +176,6 @@ mostrar_mensajes('', $errores);
     <form method="post" action="turno_nuevo.php" id="form-turno" class="formulario" novalidate>
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
 
-        <?php if ($vehiculosGuardados): ?>
-        <label class="campo completo">Vehículo guardado
-            <select id="vehiculo-guardado">
-                <option value="">Cargar uno nuevo</option>
-                <?php foreach ($vehiculosGuardados as $i => $vg): ?>
-                    <option value="<?= $i ?>"><?= htmlspecialchars($vg['modelo'] . ' · ' . $vg['patente']) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <small>Elegí uno para completar los datos. Podés ajustarlos antes de reservar.</small>
-        </label>
-        <?php endif; ?>
-
         <fieldset class="tipo completo">
             <legend>¿Qué vehículo traés?</legend>
             <label>
@@ -199,6 +187,15 @@ mostrar_mensajes('', $errores);
                 Moto
             </label>
         </fieldset>
+
+        <?php if ($vehiculosGuardados): ?>
+        <label class="campo completo" id="bloque-guardado">Vehículo guardado
+            <select id="vehiculo-guardado">
+                <option value="">Cargar uno nuevo</option>
+            </select>
+            <small>Elegí uno para completar los datos. Podés ajustarlos antes de reservar.</small>
+        </label>
+        <?php endif; ?>
 
         <label class="campo">
             Patente
@@ -324,19 +321,66 @@ mostrar_mensajes('', $errores);
     }
 
     form.querySelectorAll('input[name="tipo"]').forEach((radio) => {
-        radio.addEventListener('change', mostrarTipo);
+        radio.addEventListener('change', alCambiarTipo);
     });
 
-    // Datos de los vehículos guardados
+    // Vehículos guardados: primero se elige auto o moto, y el selector muestra solo los de ese tipo
     const guardados = <?= json_encode($vehiculosGuardados, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
+    const bloqueGuardado = document.getElementById('bloque-guardado');
     const selectorGuardado = document.getElementById('vehiculo-guardado');
+
+    function tipoElegido() {
+        return form.querySelector('input[name="tipo"]:checked').value;
+    }
+
+    // Vuelve a llenar el selector con los vehículos del tipo elegido
+    function llenarSelector() {
+        if (!selectorGuardado) {
+            return;
+        }
+        const opciones = Object.entries(guardados).filter(([, v]) => v.tipo === tipoElegido());
+        selectorGuardado.innerHTML = '';
+
+        const vacia = document.createElement('option');
+        vacia.value = '';
+        vacia.textContent = 'Cargar uno nuevo';
+        selectorGuardado.appendChild(vacia);
+
+        opciones.forEach(([indice, v]) => {
+            const op = document.createElement('option');
+            op.value = indice;
+            op.textContent = v.modelo + ' · ' + v.patente;
+            selectorGuardado.appendChild(op);
+        });
+
+        bloqueGuardado.hidden = opciones.length === 0;
+    }
+
+    function limpiarDatos() {
+        form.querySelector('[name="patente"]').value = '';
+        form.querySelectorAll('[name="modelo"], [name="marca"], [name="cilindrada"]').forEach((input) => {
+            input.value = '';
+        });
+        form.querySelector('[name="anio"]').value = '';
+        form.querySelector('[name="kilometros"]').value = '';
+    }
+
+    function alCambiarTipo() {
+        mostrarTipo();
+        const seleccion = selectorGuardado ? guardados[selectorGuardado.value] : null;
+        // Si el vehículo elegido era de otro tipo, se borran sus datos del formulario
+        if (seleccion && seleccion.tipo !== tipoElegido()) {
+            limpiarDatos();
+        }
+        llenarSelector();
+    }
+
     if (selectorGuardado) {
         selectorGuardado.addEventListener('change', () => {
             const v = guardados[selectorGuardado.value];
             if (!v) {
                 return;
             }
-            form.querySelector(`input[name="tipo"][value="${v.tipo}"]`).checked = true;
             form.querySelector('[name="patente"]').value = v.patente;
             form.querySelector('[data-solo="auto"] [name="modelo"]').value = v.tipo === 'auto' ? v.modelo : '';
             form.querySelector('[data-solo="moto"] [name="marca"]').value = v.marca;
@@ -344,12 +388,13 @@ mostrar_mensajes('', $errores);
             form.querySelector('[data-solo="moto"] [name="cilindrada"]').value = v.cilindrada;
             form.querySelector('[name="anio"]').value = v.anio;
             form.querySelector('[name="kilometros"]').value = v.kilometros;
-            mostrarTipo();
         });
     }
+
     fecha.addEventListener('change', () => cargarHorarios(''));
 
     mostrarTipo();
+    llenarSelector();
     if (fecha.value) {
         cargarHorarios(hora.value);
     }
