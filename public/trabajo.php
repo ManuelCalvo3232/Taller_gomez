@@ -4,6 +4,7 @@ require __DIR__ . '/../src/auth/acceso.php';
 require __DIR__ . '/../src/auth/flash.php';
 require __DIR__ . '/../src/views/layout.php';
 require __DIR__ . '/../src/dominio/trabajos.php';
+require __DIR__ . '/../src/dominio/pagos.php';
 require __DIR__ . '/../src/integraciones/api_node.php';
 $config = require __DIR__ . '/../config/config.php';
 
@@ -173,6 +174,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mensaje = 'Presupuesto cargado por $ ' . number_format($total, 2, ',', '.') . '. '
                      . ($enviado ? 'Se envió el aviso al cliente.' : 'No se pudo enviar el aviso por mail.');
 
+        } elseif ($accion === 'pago_presencial') {
+            // Cobro en el taller: efectivo o transferencia, sobre el presupuesto aprobado del trabajo
+            $idPresupuestoCobro = filter_var($_POST['id_presupuesto'] ?? '', FILTER_VALIDATE_INT);
+            if ($idPresupuestoCobro === false) {
+                throw new DomainException('Presupuesto inválido.');
+            }
+            $pdo->beginTransaction();
+            registrar_pago_presencial($pdo, $idPresupuestoCobro, $_POST['metodo'] ?? '', $idMecanico);
+            $pdo->commit();
+            $mensaje = 'Pago registrado. Queda reflejado en el dashboard del administrador.';
+
         } elseif ($accion === 'listo') {
             if (!puede_pasar($trabajo['estado'], 'listo')) {
                 throw new DomainException('Solo se puede marcar listo un trabajo aprobado por el cliente.');
@@ -219,6 +231,19 @@ $diagnostico = $stmt->fetchColumn();
 $stmt = $pdo->prepare("SELECT id_presupuesto, total, estado, fecha_envio FROM presupuestos WHERE id_trabajo = ? ORDER BY fecha_envio DESC");
 $stmt->execute([$idTrabajo]);
 $presupuestos = $stmt->fetchAll();
+
+// Presupuesto aprobado del trabajo y si ya fue cobrado (online o en el taller)
+$stmt = $pdo->prepare(
+    "SELECT p.id_presupuesto, p.total,
+            (SELECT pg.metodo FROM pagos pg WHERE pg.id_presupuesto = p.id_presupuesto AND pg.estado = 'aprobado'
+             LIMIT 1) AS metodo_cobro
+     FROM presupuestos p
+     WHERE p.id_trabajo = ? AND p.estado = 'aprobado'
+     ORDER BY p.fecha_respuesta DESC
+     LIMIT 1"
+);
+$stmt->execute([$idTrabajo]);
+$presupuestoAprobado = $stmt->fetch();
 
 $repuestos = $pdo->query("SELECT id_repuesto, nombre, precio FROM repuestos ORDER BY nombre")->fetchAll();
 
@@ -315,6 +340,36 @@ inicio_html('Trabajo #' . $idTrabajo);
           </div>
         <?php endforeach; ?>
       </div>
+    </div>
+  <?php endif; ?>
+
+  <?php if ($presupuestoAprobado): ?>
+    <div class="tarjeta <?= $presupuestoAprobado['metodo_cobro'] ? '' : 'destacada' ?>">
+      <h3>Cobro</h3>
+      <?php if ($presupuestoAprobado['metodo_cobro']): ?>
+        <p>
+          <span class="badge badge-cerrado">Pagado</span>
+          <span class="detalle">
+            <?= $presupuestoAprobado['metodo_cobro'] === 'mercadopago' ? 'con Mercado Pago' : 'en el taller (' . htmlspecialchars($presupuestoAprobado['metodo_cobro']) . ')' ?>
+          </span>
+        </p>
+      <?php else: ?>
+        <p class="detalle">Total a cobrar: <strong>$ <?= number_format($presupuestoAprobado['total'], 2, ',', '.') ?></strong>.
+          Si el cliente paga en el taller, registralo acá. Si paga online, se marca solo.</p>
+        <form method="POST" action="trabajo.php?id=<?= (int) $idTrabajo ?>" class="formulario">
+          <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+          <input type="hidden" name="accion" value="pago_presencial">
+          <input type="hidden" name="id_trabajo" value="<?= (int) $idTrabajo ?>">
+          <input type="hidden" name="id_presupuesto" value="<?= (int) $presupuestoAprobado['id_presupuesto'] ?>">
+          <label class="campo">Forma de pago
+            <select name="metodo" required>
+              <option value="efectivo">Efectivo</option>
+              <option value="transferencia">Transferencia</option>
+            </select>
+          </label>
+          <div class="completo"><button type="submit" class="btn">Registrar pago en el taller</button></div>
+        </form>
+      <?php endif; ?>
     </div>
   <?php endif; ?>
 

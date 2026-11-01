@@ -108,7 +108,9 @@ $stmt = $pdo->prepare(
     "SELECT p.id_presupuesto, p.total, p.estado, p.fecha_envio, p.fecha_respuesta,
             v.patente, v.modelo,
             (SELECT pg.estado FROM pagos pg WHERE pg.id_presupuesto = p.id_presupuesto
-             ORDER BY pg.id_pago DESC LIMIT 1) AS estado_pago
+             ORDER BY pg.id_pago DESC LIMIT 1) AS estado_pago,
+            (SELECT pg.metodo FROM pagos pg WHERE pg.id_presupuesto = p.id_presupuesto AND pg.estado = 'aprobado'
+             LIMIT 1) AS metodo_pago
      FROM presupuestos p
      JOIN trabajos t ON t.id_trabajo = p.id_trabajo
      JOIN turnos tu ON tu.id_turno = t.id_turno
@@ -184,7 +186,11 @@ inicio_html('Mis presupuestos');
         <div class="acciones" style="justify-content:flex-end;">
           <?php if ($p['estado_pago'] === 'aprobado'): ?>
             <span class="badge badge-cerrado">Pagado</span>
+            <?php if ($p['metodo_pago'] !== 'mercadopago'): ?>
+              <span class="detalle vacio">en el taller</span>
+            <?php endif; ?>
           <?php else: ?>
+            <span class="detalle vacio">Podés pagarlo acá o en el taller con efectivo o transferencia.</span>
             <form method="POST" action="pagar.php">
               <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
               <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">

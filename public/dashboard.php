@@ -31,7 +31,16 @@ function listarTrabajos(PDO $pdo, string $condicion): array
 $realizados = listarTrabajos($pdo, "t.estado = 'listo'");
 $activos = listarTrabajos($pdo, "t.estado NOT IN ('listo', 'rechazado')");
 $stock = $pdo->query("SELECT nombre, stock, precio FROM repuestos ORDER BY stock ASC")->fetchAll();
-$caja = $pdo->query("SELECT COALESCE(SUM(total), 0) FROM presupuestos WHERE estado = 'aprobado'")->fetchColumn();
+// Cobrado: pagos aprobados (Mercado Pago y taller). Pendiente: aprobados sin ningún pago aprobado
+$cobrado = $pdo->query("SELECT COALESCE(SUM(monto), 0) FROM pagos WHERE estado = 'aprobado'")->fetchColumn();
+$cobradoEnTaller = $pdo->query(
+    "SELECT COALESCE(SUM(monto), 0) FROM pagos WHERE estado = 'aprobado' AND metodo <> 'mercadopago'"
+)->fetchColumn();
+$pendienteCobro = $pdo->query(
+    "SELECT COALESCE(SUM(p.total), 0) FROM presupuestos p
+     WHERE p.estado = 'aprobado'
+       AND NOT EXISTS (SELECT 1 FROM pagos pg WHERE pg.id_presupuesto = p.id_presupuesto AND pg.estado = 'aprobado')"
+)->fetchColumn();
 
 $stockBajo = count(array_filter($stock, fn($r) => (int) $r['stock'] < 5));
 
@@ -68,8 +77,13 @@ inicio_html('Dashboard', $extraHead);
 
   <div class="stats">
     <div class="stat">
-      <div class="etiqueta">Caja (presupuestos aprobados)</div>
-      <div class="valor">$ <?= number_format($caja, 2, ',', '.') ?></div>
+      <div class="etiqueta">Cobrado</div>
+      <div class="valor">$ <?= number_format($cobrado, 2, ',', '.') ?></div>
+      <div class="detalle vacio">En el taller: $ <?= number_format($cobradoEnTaller, 2, ',', '.') ?></div>
+    </div>
+    <div class="stat">
+      <div class="etiqueta">Pendiente de cobro</div>
+      <div class="valor">$ <?= number_format($pendienteCobro, 2, ',', '.') ?></div>
     </div>
     <div class="stat">
       <div class="etiqueta">Trabajos activos</div>

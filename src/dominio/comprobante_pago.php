@@ -51,3 +51,46 @@ function enviar_comprobante_pago(PDO $pdo, int $idPago, string $numeroOperacion)
 
     return enviar_mail_brevo($d['email'], 'Comprobante de pago - Taller Gómez', $html);
 }
+
+// Aviso al cliente cuando aprueba un presupuesto: le dice que ya puede pagarlo, online o en el taller
+function enviar_aviso_pago_pendiente(PDO $pdo, int $idPresupuesto): bool
+{
+    try {
+        $stmt = $pdo->prepare(
+            'SELECT p.total, v.modelo, v.patente, u.nombre, u.email
+             FROM presupuestos p
+             JOIN trabajos t ON t.id_trabajo = p.id_trabajo
+             JOIN turnos tu ON tu.id_turno = t.id_turno
+             JOIN vehiculos v ON v.id_vehiculo = tu.id_vehiculo
+             JOIN usuarios u ON u.id_usuario = v.id_cliente
+             WHERE p.id_presupuesto = ?'
+        );
+        $stmt->execute([$idPresupuesto]);
+        $d = $stmt->fetch();
+        if (!$d) {
+            return false;
+        }
+
+        $e = fn (string $texto): string => htmlspecialchars($texto, ENT_QUOTES, 'UTF-8');
+        $monto = '$ ' . number_format((float) $d['total'], 2, ',', '.');
+
+        $html = '
+<div style="font-family:Inter,Arial,sans-serif; max-width:560px; margin:0 auto; background:#F2F2F2; padding:24px;">
+  <div style="background:#171717; color:#FFFFFF; padding:16px 20px; border-left:4px solid #E63946; font-weight:800; letter-spacing:.08em;">
+    TALLER GÓMEZ
+  </div>
+  <div style="background:#FFFFFF; padding:24px 20px; color:#171717;">
+    <h2 style="margin:0 0 12px;">Aprobaste el presupuesto</h2>
+    <p>Hola ' . $e($d['nombre']) . ', recibimos tu aprobación para tu ' . $e($d['modelo']) . ' (' . $e($d['patente']) . '). El taller ya puede seguir con la reparación.</p>
+    <p style="text-align:right; font-size:18px; font-weight:800;">Total a pagar: ' . $monto . '</p>
+    <p>Podés pagarlo online desde <strong>Mis presupuestos</strong> en tu cuenta, o en el taller con efectivo o transferencia.</p>
+    <p style="color:#8A8A8A; font-size:13px; margin:16px 0 0;">Presupuesto #' . (int) $idPresupuesto . '</p>
+  </div>
+</div>';
+
+        return enviar_mail_brevo($d['email'], 'Presupuesto aprobado - podés pagarlo - Taller Gómez', $html);
+    } catch (PDOException $e) {
+        error_log('aviso_pago_pendiente: ' . $e->getMessage());
+        return false;
+    }
+}

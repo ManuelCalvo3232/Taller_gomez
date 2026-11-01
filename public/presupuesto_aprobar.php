@@ -3,6 +3,7 @@
 require __DIR__ . '/../src/auth/csrf.php';
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/dominio/trabajos.php';
+require __DIR__ . '/../src/dominio/comprobante_pago.php';
 require __DIR__ . '/../src/views/layout.php';
 
 // Página pública: no pide login. El acceso lo da el token del link del mail.
@@ -85,6 +86,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $pdo->commit();
 
+        // Al aprobar, el cliente recibe el aviso de que ya puede pagar
+        if ($nuevo === 'aprobado') {
+            enviar_aviso_pago_pendiente($pdo, $idPresupuesto);
+        }
+
         // PRG: después de decidir, el token deja de estar en la URL
         header('Location: presupuesto_aprobar.php?resultado=' . $nuevo);
         exit;
@@ -139,6 +145,8 @@ mostrar_mensajes('', $error ? [$error] : []);
     <section class="tarjeta destacada">
         <h1>¡Presupuesto aprobado!</h1>
         <p>Gracias. El taller va a seguir con tu vehículo.</p>
+        <p>Podés pagarlo online desde <a href="presupuestos.php">Mis presupuestos</a> (te pide iniciar sesión), o en el taller con efectivo o transferencia.</p>
+        <p><a class="btn btn-grande" href="presupuestos.php">Ir a pagar</a></p>
     </section>
 
 <?php elseif ($resultado === 'rechazado'): ?>

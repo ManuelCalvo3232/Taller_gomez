@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/../src/auth/acceso.php';
+require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/views/layout.php';
 
 requerir_login();
@@ -8,6 +9,21 @@ $nombre = $_SESSION['nombre'];
 $rol = $_SESSION['rol'];
 
 // Opciones según el rol: cada una apunta a una vista que se protege sola
+// Para el cliente: presupuestos aprobados que todavía no están pagados
+$pagosPendientes = null;
+if ($rol === 'cliente') {
+    $stmt = conectar()->prepare(
+        "SELECT COUNT(*) FROM presupuestos p
+         JOIN trabajos t ON t.id_trabajo = p.id_trabajo
+         JOIN turnos tu ON tu.id_turno = t.id_turno
+         JOIN vehiculos v ON v.id_vehiculo = tu.id_vehiculo
+         WHERE v.id_cliente = ? AND p.estado = 'aprobado'
+           AND NOT EXISTS (SELECT 1 FROM pagos pg WHERE pg.id_presupuesto = p.id_presupuesto AND pg.estado = 'aprobado')"
+    );
+    $stmt->execute([(int) $_SESSION['usuario_id']]);
+    $pagosPendientes = (int) $stmt->fetchColumn();
+}
+
 $opciones = [
     'cliente' => [
         ['Pedir turno', 'Reservá el horario para tu vehículo', 'turno_nuevo.php'],
@@ -36,6 +52,11 @@ if ($rol === 'mecanico') {
 inicio_html('Panel');
 ?>
   <h1>Hola, <?= htmlspecialchars($nombre) ?></h1>
+  <?php if ($pagosPendientes > 0): ?>
+    <a href="presupuestos.php" class="alerta alerta-error" style="display:block; text-decoration:none;">
+      Tenés <?= $pagosPendientes ?> presupuesto<?= $pagosPendientes === 1 ? '' : 's' ?> pendiente<?= $pagosPendientes === 1 ? '' : 's' ?> de pago · Ver presupuestos
+    </a>
+  <?php endif; ?>
   <?php if ($repuestosBajos > 0): ?>
     <a href="stock.php" class="alerta alerta-error" style="display:block; text-decoration:none;">
       <?= $repuestosBajos ?> repuesto<?= $repuestosBajos === 1 ? '' : 's' ?> con stock bajo · Ver stock
