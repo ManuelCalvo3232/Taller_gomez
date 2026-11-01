@@ -18,6 +18,7 @@ $opciones = [
     ],
     'mecanico' => [
         ['Trabajos', 'Asignate vehículos y cargá diagnósticos y presupuestos', 'trabajos.php'],
+        ['Repuestos del taller', 'Qué hay en stock y avisar si falta algo', 'stock.php'],
     ],
     'admin' => [
         ['Dashboard', 'Caja, trabajos, stock e insights del taller', 'dashboard.php'],

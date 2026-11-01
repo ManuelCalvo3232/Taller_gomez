@@ -31,6 +31,7 @@ function inicio_html(string $titulo, string $extraHead = ''): void
           <a href="perfil.php">Mi perfil</a>
         <?php elseif ($rol === 'mecanico'): ?>
           <a href="trabajos.php">Trabajos</a>
+          <a href="stock.php">Repuestos</a>
         <?php elseif ($rol === 'admin'): ?>
           <a href="dashboard.php">Dashboard</a>
           <a href="stock.php">Stock</a>

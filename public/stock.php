@@ -3,14 +3,46 @@ require __DIR__ . '/../src/auth/acceso.php';
 require __DIR__ . '/../src/auth/flash.php';
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/dominio/stock.php';
+require __DIR__ . '/../src/integraciones/brevo.php';
 require __DIR__ . '/../src/views/layout.php';
 
-requerir_rol('admin');
+requerir_rol('admin', 'mecanico');
+
+$esAdmin = $_SESSION['rol'] === 'admin';
 
 $pdo = conectar();
 $idUsuario = (int) $_SESSION['usuario_id'];
 $errores = [];
 $mensaje = flash_get();
+
+// Mail con los repuestos que están por debajo del mínimo
+function html_alerta_stock(array $bajos, string $quien): string
+{
+    $celda = 'padding:8px;border-bottom:1px solid #EDEDED;';
+    $filas = '';
+    foreach ($bajos as $r) {
+        $filas .= '<tr>'
+            . '<td style="' . $celda . '">' . htmlspecialchars($r['nombre']) . '</td>'
+            . '<td style="' . $celda . '">' . htmlspecialchars($r['marca_vehiculo'] ?? '—') . '</td>'
+            . '<td style="' . $celda . 'text-align:right;">' . (int) $r['stock'] . '</td>'
+            . '<td style="' . $celda . 'text-align:right;">' . (int) $r['stock_minimo'] . '</td>'
+            . '</tr>';
+    }
+
+    return '<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#F2F2F2;padding:24px;">'
+        . '<div style="background:#171717;color:#FFFFFF;padding:16px 20px;border-left:4px solid #E63946;font-weight:800;letter-spacing:.08em;">TALLER GÓMEZ</div>'
+        . '<div style="background:#FFFFFF;padding:24px 20px;color:#171717;">'
+        . '<h2 style="margin:0 0 12px;">Alerta de stock bajo</h2>'
+        . '<p>' . htmlspecialchars($quien) . ' avisó que estos repuestos están en el mínimo o por debajo:</p>'
+        . '<table style="width:100%;border-collapse:collapse;font-size:14px;">'
+        . '<tr style="background:#171717;color:#FFFFFF;">'
+        . '<th style="padding:10px 8px;text-align:left;">Repuesto</th>'
+        . '<th style="padding:10px 8px;text-align:left;">Vehículo</th>'
+        . '<th style="padding:10px 8px;text-align:right;">Stock</th>'
+        . '<th style="padding:10px 8px;text-align:right;">Mínimo</th></tr>'
+        . $filas . '</table>'
+        . '</div></div>';
+}
 
 // Valida los campos comunes de un repuesto (alta o edición)
 function datos_repuesto(array $p, array &$errores): array
@@ -46,6 +78,12 @@ function datos_repuesto(array $p, array &$errores): array
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verificar();
     $accion = $_POST['accion'] ?? '';
+
+    // Solo el admin modifica stock y proveedores. El mecánico solo puede pedir la alerta.
+    if (!$esAdmin && $accion !== 'alerta_stock') {
+        http_response_code(403);
+        exit('No tenés permiso para esta acción.');
+    }
 
     try {
         if ($accion === 'alta') {
@@ -91,6 +129,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 )->execute([$datos['nombre'], $datos['marca_vehiculo'], $datos['categoria'], $datos['precio'], $datos['stock_minimo'], $id]);
                 flash_set('Repuesto actualizado.');
                 header('Location: stock.php?id=' . $id);
+                exit;
+            }
+        }
+
+        if ($accion === 'alerta_stock') {
+            $bajos = $pdo->query('SELECT nombre, marca_vehiculo, stock, stock_minimo FROM repuestos WHERE stock <= stock_minimo ORDER BY nombre')->fetchAll();
+
+            if (!$bajos) {
+                flash_set('No hay repuestos con stock bajo.');
+                header('Location: stock.php');
+                exit;
+            }
+
+            $reciente = $pdo->query('SELECT COUNT(*) FROM alertas_stock WHERE creado_en > NOW() - INTERVAL 6 HOUR')->fetchColumn();
+            if ((int) $reciente > 0) {
+                $errores[] = 'Ya se envió una alerta en las últimas 6 horas. Esperá un poco antes de volver a enviarla.';
+            } else {
+                $admins = $pdo->query("SELECT email FROM usuarios WHERE rol = 'admin' AND email_verificado_en IS NOT NULL")
+                    ->fetchAll(PDO::FETCH_COLUMN);
+                if (!$admins) {
+                    throw new DomainException('No hay administradores con email verificado.');
+                }
+
+                $html = html_alerta_stock($bajos, $_SESSION['nombre']);
+                $enviados = 0;
+                foreach ($admins as $mailAdmin) {
+                    if (enviar_mail_brevo($mailAdmin, 'Alerta de stock bajo en el taller', $html)) {
+                        $enviados++;
+                    }
+                }
+                if ($enviados === 0) {
+                    throw new DomainException('No pudimos enviar la alerta. Revisá la configuración de mails.');
+                }
+
+                $pdo->prepare('INSERT INTO alertas_stock (id_usuario, cantidad_repuestos) VALUES (?, ?)')
+                    ->execute([$idUsuario, count($bajos)]);
+                flash_set('Alerta enviada al administrador.');
+                header('Location: stock.php');
                 exit;
             }
         }
@@ -225,7 +301,7 @@ function pesos_fmt(float $v): string
     return '$ ' . number_format($v, 2, ',', '.');
 }
 
-$vista = (($_GET['vista'] ?? '') === 'proveedores' || in_array($_POST['accion'] ?? '', ['alta_proveedor', 'eliminar_proveedor'], true))
+$vista = $esAdmin && (($_GET['vista'] ?? '') === 'proveedores' || in_array($_POST['accion'] ?? '', ['alta_proveedor', 'eliminar_proveedor'], true))
     ? 'proveedores'
     : 'repuestos';
 
@@ -236,7 +312,9 @@ inicio_html('Stock de repuestos');
 
 <p style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px">
   <a class="btn <?= $vista === 'repuestos' ? 'btn-oscuro' : 'btn-outline' ?>" href="stock.php">Repuestos</a>
-  <a class="btn <?= $vista === 'proveedores' ? 'btn-oscuro' : 'btn-outline' ?>" href="stock.php?vista=proveedores">Proveedores</a>
+  <?php if ($esAdmin): ?>
+    <a class="btn <?= $vista === 'proveedores' ? 'btn-oscuro' : 'btn-outline' ?>" href="stock.php?vista=proveedores">Proveedores</a>
+  <?php endif; ?>
 </p>
 
 <?php if ($vista === 'proveedores'): ?>
@@ -297,12 +375,15 @@ inicio_html('Stock de repuestos');
     <p class="detalle">
       Stock: <strong><?= (int) $detalle['stock'] ?></strong> ·
       Mínimo: <?= (int) $detalle['stock_minimo'] ?> ·
-      Costo: <?= pesos_fmt((float) $detalle['costo']) ?> ·
-      Venta: <?= pesos_fmt((float) $detalle['precio']) ?> ·
-      Ganancia: <?= pesos_fmt($gananciaPesos) ?> (<?= number_format($gananciaMargen, 1, ',', '.') ?>%)
+      Venta: <?= pesos_fmt((float) $detalle['precio']) ?>
+      <?php if ($esAdmin): ?>
+        · Costo: <?= pesos_fmt((float) $detalle['costo']) ?>
+        · Ganancia: <?= pesos_fmt($gananciaPesos) ?> (<?= number_format($gananciaMargen, 1, ',', '.') ?>%)
+      <?php endif; ?>
     </p>
   </section>
 
+  <?php if ($esAdmin): ?>
   <section class="tarjeta" style="margin-top:20px">
     <h2>Registrar movimiento</h2>
     <form method="POST" action="stock.php" class="formulario" id="form-mov">
@@ -410,6 +491,7 @@ inicio_html('Stock de repuestos');
   })();
   </script>
 
+  <?php endif; ?>
 <?php else: ?>
   <form method="GET" action="stock.php" class="formulario" style="margin-bottom:16px">
     <label class="campo completo">Buscar
@@ -417,12 +499,25 @@ inicio_html('Stock de repuestos');
     </label>
   </form>
 
+  <?php $cantBajos = count(array_filter($listado, fn ($r) => (int) $r['stock'] <= (int) $r['stock_minimo'])); ?>
+
+  <form method="POST" action="stock.php" style="margin-bottom:16px">
+    <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+    <input type="hidden" name="accion" value="alerta_stock">
+    <button type="submit" class="btn btn-outline" <?= $cantBajos ? '' : 'disabled' ?>>
+      Avisar al administrador<?= $cantBajos ? " ($cantBajos con stock bajo)" : ' (no hay stock bajo)' ?>
+    </button>
+  </form>
+
   <div class="tabla-wrap">
     <table class="tabla">
       <thead>
         <tr>
           <th>Repuesto</th><th>Vehículo</th><th class="num">Stock</th>
-          <th class="num">Costo</th><th class="num">Venta</th><th class="num">Ganancia</th><th></th>
+          <?php if ($esAdmin): ?><th class="num">Costo</th><?php endif; ?>
+          <th class="num">Venta</th>
+          <?php if ($esAdmin): ?><th class="num">Ganancia</th><?php endif; ?>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -437,19 +532,22 @@ inicio_html('Stock de repuestos');
                   ? '<span class="badge badge-rechazado">Bajo</span>'
                   : '' ?>
             </td>
-            <td class="num"><?= pesos_fmt((float) $r['costo']) ?></td>
+            <?php if ($esAdmin): ?><td class="num"><?= pesos_fmt((float) $r['costo']) ?></td><?php endif; ?>
             <td class="num"><?= pesos_fmt((float) $r['precio']) ?></td>
-            <td class="num"><?= pesos_fmt($gPesos) ?> <span class="detalle">(<?= number_format($gMargen, 0, ',', '.') ?>%)</span></td>
+            <?php if ($esAdmin): ?>
+              <td class="num"><?= pesos_fmt($gPesos) ?> <span class="detalle">(<?= number_format($gMargen, 0, ',', '.') ?>%)</span></td>
+            <?php endif; ?>
             <td><a href="stock.php?id=<?= (int) $r['id_repuesto'] ?>">Ver</a></td>
           </tr>
         <?php endforeach; ?>
         <?php if (!$listado): ?>
-          <tr><td colspan="7" class="vacio">No hay repuestos para mostrar.</td></tr>
+          <tr><td colspan="<?= $esAdmin ? 7 : 5 ?>" class="vacio">No hay repuestos para mostrar.</td></tr>
         <?php endif; ?>
       </tbody>
     </table>
   </div>
 
+  <?php if ($esAdmin): ?>
   <section class="tarjeta" style="margin-top:24px">
     <h2>Agregar repuesto</h2>
     <form method="POST" action="stock.php" class="formulario">
@@ -492,6 +590,7 @@ inicio_html('Stock de repuestos');
       </div>
     </form>
   </section>
+  <?php endif; ?>
 <?php endif; ?>
 <?php
 fin_html();
