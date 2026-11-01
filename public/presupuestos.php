@@ -106,7 +106,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Presupuestos de los vehículos de este cliente
 $stmt = $pdo->prepare(
     "SELECT p.id_presupuesto, p.total, p.estado, p.fecha_envio, p.fecha_respuesta,
-            v.patente, v.modelo
+            v.patente, v.modelo,
+            (SELECT pg.estado FROM pagos pg WHERE pg.id_presupuesto = p.id_presupuesto
+             ORDER BY pg.id_pago DESC LIMIT 1) AS estado_pago
      FROM presupuestos p
      JOIN trabajos t ON t.id_trabajo = p.id_trabajo
      JOIN turnos tu ON tu.id_turno = t.id_turno
@@ -175,6 +177,20 @@ inicio_html('Mis presupuestos');
             <input type="hidden" name="accion" value="rechazar">
             <button type="submit" class="btn btn-outline btn-grande">Rechazar</button>
           </form>
+        </div>
+      <?php endif; ?>
+
+      <?php if ($p['estado'] === 'aprobado'): ?>
+        <div class="acciones" style="justify-content:flex-end;">
+          <?php if ($p['estado_pago'] === 'aprobado'): ?>
+            <span class="badge badge-cerrado">Pagado</span>
+          <?php else: ?>
+            <form method="POST" action="pagar.php">
+              <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+              <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">
+              <button type="submit" class="btn btn-grande">Pagar</button>
+            </form>
+          <?php endif; ?>
         </div>
       <?php endif; ?>
     </div>
