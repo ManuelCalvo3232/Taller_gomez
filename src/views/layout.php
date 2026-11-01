@@ -33,6 +33,8 @@ function inicio_html(string $titulo, string $extraHead = ''): void
           <a href="trabajos.php">Trabajos</a>
         <?php elseif ($rol === 'admin'): ?>
           <a href="dashboard.php">Dashboard</a>
+          <a href="stock.php">Stock</a>
+          <a href="proveedores.php">Proveedores</a>
         <?php endif; ?>
       </nav>
 
