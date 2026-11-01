@@ -93,6 +93,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
 
+        if ($accion === 'alta_proveedor') {
+            $nombre = trim($_POST['nombre'] ?? '');
+            $telefono = trim($_POST['telefono'] ?? '');
+            $email = trim($_POST['email'] ?? '');
+            $cuit = trim($_POST['cuit'] ?? '');
+
+            if ($nombre === '' || mb_strlen($nombre) > 120) {
+                $errores[] = 'El nombre del proveedor es obligatorio (hasta 120 caracteres).';
+            }
+            if ($email !== '' && (filter_var($email, FILTER_VALIDATE_EMAIL) === false || strlen($email) > 150)) {
+                $errores[] = 'El email no es válido.';
+            }
+            if ($cuit !== '' && preg_match('/^\d{2}-?\d{8}-?\d$/', $cuit) !== 1) {
+                $errores[] = 'El CUIT no es válido. Ejemplo: 30-12345678-9.';
+            }
+
+            if (!$errores) {
+                $pdo->prepare('INSERT INTO proveedores (nombre, telefono, email, cuit) VALUES (?, ?, ?, ?)')
+                    ->execute([$nombre, $telefono ?: null, $email ?: null, $cuit ?: null]);
+                flash_set('Proveedor agregado.');
+                header('Location: stock.php?vista=proveedores');
+                exit;
+            }
+        }
+
+        if ($accion === 'eliminar_proveedor') {
+            try {
+                $pdo->prepare('DELETE FROM proveedores WHERE id_proveedor = ?')
+                    ->execute([(int) ($_POST['id_proveedor'] ?? 0)]);
+                flash_set('Proveedor eliminado.');
+                header('Location: stock.php?vista=proveedores');
+                exit;
+            } catch (PDOException $e) {
+                // Con compras registradas no se borra, para no perder el historial
+                if ($e->getCode() !== '23000') {
+                    throw $e;
+                }
+                $errores[] = 'No podés eliminar un proveedor con compras registradas.';
+            }
+        }
+
         if ($accion === 'movimiento') {
             $id = (int) ($_POST['id_repuesto'] ?? 0);
             $tipo = $_POST['tipo'] ?? '';
@@ -165,7 +206,7 @@ $like = '%' . $busqueda . '%';
 $stmt->execute([$busqueda, $like, $like]);
 $listado = $stmt->fetchAll();
 
-$proveedores = $pdo->query('SELECT id_proveedor, nombre FROM proveedores ORDER BY nombre')->fetchAll();
+$proveedores = $pdo->query('SELECT * FROM proveedores ORDER BY nombre')->fetchAll();
 
 // Ganancia por unidad y margen sobre el precio de venta
 function ganancia_texto(array $r): array
@@ -182,12 +223,70 @@ function pesos_fmt(float $v): string
     return '$ ' . number_format($v, 2, ',', '.');
 }
 
+$vista = (($_GET['vista'] ?? '') === 'proveedores' || in_array($_POST['accion'] ?? '', ['alta_proveedor', 'eliminar_proveedor'], true))
+    ? 'proveedores'
+    : 'repuestos';
+
 inicio_html('Stock de repuestos');
 ?>
 <h1>Stock de repuestos</h1>
 <?php mostrar_mensajes($mensaje, $errores); ?>
 
-<?php if ($detalle): ?>
+<p style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px">
+  <a class="btn <?= $vista === 'repuestos' ? 'btn-oscuro' : 'btn-outline' ?>" href="stock.php">Repuestos</a>
+  <a class="btn <?= $vista === 'proveedores' ? 'btn-oscuro' : 'btn-outline' ?>" href="stock.php?vista=proveedores">Proveedores</a>
+</p>
+
+<?php if ($vista === 'proveedores'): ?>
+  <div class="lista">
+    <?php if (!$proveedores): ?>
+      <p class="vacio">Todavía no cargaste proveedores.</p>
+    <?php endif; ?>
+    <?php foreach ($proveedores as $pr): ?>
+      <div class="item">
+        <div>
+          <div class="titulo"><?= htmlspecialchars($pr['nombre']) ?></div>
+          <div class="detalle">
+            <?= htmlspecialchars($pr['telefono'] ?? 'Sin teléfono') ?>
+            · <?= htmlspecialchars($pr['email'] ?? 'Sin email') ?>
+            · CUIT <?= htmlspecialchars($pr['cuit'] ?? '—') ?>
+          </div>
+        </div>
+        <form method="POST" action="stock.php" onsubmit="return confirm('¿Eliminar este proveedor?');">
+          <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+          <input type="hidden" name="accion" value="eliminar_proveedor">
+          <input type="hidden" name="id_proveedor" value="<?= (int) $pr['id_proveedor'] ?>">
+          <button type="submit" class="btn btn-outline">Eliminar</button>
+        </form>
+      </div>
+    <?php endforeach; ?>
+  </div>
+
+  <section class="tarjeta" style="margin-top:24px">
+    <h2>Agregar proveedor</h2>
+    <form method="POST" action="stock.php" class="formulario">
+      <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+      <input type="hidden" name="accion" value="alta_proveedor">
+
+      <label class="campo completo">Nombre
+        <input type="text" name="nombre" maxlength="120" required>
+      </label>
+      <label class="campo">Teléfono
+        <input type="tel" name="telefono" maxlength="30">
+      </label>
+      <label class="campo">Email
+        <input type="email" name="email" maxlength="150">
+      </label>
+      <label class="campo completo">CUIT (opcional)
+        <input type="text" name="cuit" maxlength="13" placeholder="30-12345678-9">
+      </label>
+      <div class="completo">
+        <button type="submit" class="btn btn-grande">Agregar proveedor</button>
+      </div>
+    </form>
+  </section>
+
+<?php elseif ($detalle): ?>
   <p><a href="stock.php">← Volver al listado</a></p>
 
   <?php [$gananciaPesos, $gananciaMargen] = ganancia_texto($detalle); ?>

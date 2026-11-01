@@ -21,8 +21,7 @@ $opciones = [
     ],
     'admin' => [
         ['Dashboard', 'Caja, trabajos, stock e insights del taller', 'dashboard.php'],
-        ['Stock de repuestos', 'Compras, ventas, costos y ganancia por repuesto', 'stock.php'],
-        ['Proveedores', 'Quién te vende cada repuesto', 'proveedores.php'],
+        ['Stock y proveedores', 'Repuestos, compras, costos, ganancia y proveedores', 'stock.php'],
     ],
 ];
 
