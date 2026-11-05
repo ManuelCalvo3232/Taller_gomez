@@ -296,3 +296,277 @@ a.item:hover .flecha { color: var(--grafito); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* =========================================
+   TALLER GÓMEZ — PREMIUM PUBLIC EXPERIENCE
+   ========================================= */
+
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --premium-bg: #101820;
+  --premium-panel: #1D2935;
+  --premium-gold: #C6A66B;
+  --premium-ivory: #F5F3EE;
+  --premium-steel: #A7ADB4;
+}
+
+/* Fondo general */
+body:has(.auth) {
+  min-height: 100vh;
+  background: var(--premium-bg);
+  color: var(--premium-ivory);
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+/* Header */
+body:has(.auth) .barra {
+  background: rgba(16, 24, 32, .96);
+  border-bottom: 1px solid rgba(198, 166, 107, .35);
+  box-shadow: none;
+  padding: 22px 6%;
+}
+
+body:has(.auth) .marca {
+  font-family: 'Manrope', sans-serif;
+  font-size: 1rem;
+  letter-spacing: .22em;
+  font-weight: 800;
+}
+
+body:has(.auth) .contenedor {
+  max-width: none;
+  width: 100%;
+  min-height: calc(100vh - 75px);
+  padding: 0;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+/* Composición principal */
+body:has(.auth) .auth {
+  width: 100%;
+  max-width: 1280px;
+  min-height: 650px;
+  margin: auto;
+  padding: 54px 6%;
+  display: grid;
+  grid-template-columns: 1.1fr .9fr;
+  align-items: center;
+  gap: 7%;
+}
+
+/* Panel visual */
+body:has(.auth) .auth::before {
+  content: "";
+  display: block;
+  width: 100%;
+  min-height: 540px;
+  border-radius: 3px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(16, 24, 32, .05),
+      rgba(16, 24, 32, .35) 55%,
+      rgba(16, 24, 32, .9)
+    ),
+    url("https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1400&q=85")
+    center / cover;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .25);
+}
+
+/* Tarjeta de formulario */
+body:has(.auth) .auth .tarjeta {
+  width: 100%;
+  max-width: 470px;
+  margin: 0 auto;
+  padding: 48px 42px;
+  background: var(--premium-ivory);
+  color: var(--premium-bg);
+  border: 0;
+  border-top: 3px solid var(--premium-gold);
+  border-radius: 2px;
+  box-shadow: 0 25px 70px rgba(0, 0, 0, .22);
+}
+
+body:has(.auth) h1 {
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  line-height: 1.15;
+  font-weight: 800;
+  letter-spacing: -.055em;
+  margin-bottom: 14px;
+  color: var(--premium-bg);
+}
+
+body:has(.auth) .tarjeta p {
+  color: #626B73;
+  line-height: 1.7;
+}
+
+body:has(.auth) .tarjeta a {
+  color: #806337;
+  font-weight: 600;
+  text-decoration-color: var(--premium-gold);
+  text-underline-offset: 4px;
+}
+
+body:has(.auth) .tarjeta a:hover {
+  color: var(--premium-bg);
+}
+
+/* Formularios */
+body:has(.auth) .formulario {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 21px 16px;
+  margin-top: 28px;
+}
+
+body:has(.auth) .campo {
+  color: #343E47;
+  font-size: .82rem;
+  font-weight: 700;
+  letter-spacing: .015em;
+  gap: 9px;
+}
+
+body:has(.auth) .campo input,
+body:has(.auth) .campo select,
+body:has(.auth) .campo textarea {
+  width: 100%;
+  min-height: 49px;
+  padding: 13px 14px;
+  background: #fff;
+  border: 1px solid #D8D6D0;
+  border-radius: 2px;
+  color: var(--premium-bg);
+  font-family: 'Inter', sans-serif;
+  font-size: .92rem;
+  transition: border-color .2s, box-shadow .2s;
+}
+
+body:has(.auth) .campo input:focus,
+body:has(.auth) .campo select:focus,
+body:has(.auth) .campo textarea:focus {
+  outline: none;
+  border-color: var(--premium-gold);
+  box-shadow: 0 0 0 3px rgba(198, 166, 107, .16);
+}
+
+body:has(.auth) .campo small {
+  color: #737B82;
+  line-height: 1.5;
+}
+
+body:has(.auth) .completo {
+  grid-column: 1 / -1;
+}
+
+/* Botones */
+body:has(.auth) .btn {
+  min-height: 50px;
+  padding: 14px 22px;
+  background: var(--premium-bg);
+  color: var(--premium-ivory);
+  border: 1px solid var(--premium-bg);
+  border-radius: 2px;
+  font-family: 'Manrope', sans-serif;
+  font-size: .83rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  transition: background .2s, border-color .2s, transform .2s;
+}
+
+body:has(.auth) .btn:hover {
+  background: #293B4A;
+  border-color: var(--premium-gold);
+  transform: translateY(-2px);
+  box-shadow: none;
+}
+
+body:has(.auth) .btn-grande {
+  width: 100%;
+}
+
+/* Mensajes */
+body:has(.auth) .alerta {
+  border-radius: 2px;
+  padding: 13px 15px;
+  font-size: .88rem;
+  line-height: 1.5;
+}
+
+body:has(.auth) .alerta-ok {
+  background: #E6E9E3;
+  color: #24452F;
+  box-shadow: inset 3px 0 0 #557A5D;
+}
+
+body:has(.auth) .alerta-error {
+  background: #F5E8E5;
+  color: #9E3026;
+  box-shadow: inset 3px 0 0 #B42318;
+}
+
+/* Responsive */
+@media (max-width: 850px) {
+  body:has(.auth) .auth {
+    grid-template-columns: 1fr;
+    max-width: 620px;
+    padding: 35px 22px 55px;
+    gap: 0;
+  }
+
+  body:has(.auth) .auth::before {
+    min-height: 230px;
+    background-position: center 55%;
+  }
+
+  body:has(.auth) .auth .tarjeta {
+    max-width: none;
+    padding: 35px 28px;
+  }
+}
+
+@media (max-width: 520px) {
+  body:has(.auth) .barra {
+    padding: 18px 22px;
+  }
+
+  body:has(.auth) .auth {
+    padding: 22px 16px 40px;
+  }
+
+  body:has(.auth) .auth::before {
+    min-height: 180px;
+  }
+
+  body:has(.auth) .auth .tarjeta {
+    padding: 30px 22px;
+  }
+
+  body:has(.auth) .formulario {
+    grid-template-columns: 1fr;
+  }
+
+  body:has(.auth) .formulario .completo {
+    grid-column: 1;
+  }
+
+  body:has(.auth) h1 {
+    font-size: 1.9rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body:has(.auth) *,
+  body:has(.auth) *::before,
+  body:has(.auth) *::after {
+    transition: none !important;
+    animation: none !important;
+  }
+}
