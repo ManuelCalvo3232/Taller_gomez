@@ -77,14 +77,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-inicio_html('Iniciar sesión');
+inicio_html('Iniciar sesión', '<script src="assets/validar.js" defer></script>');
 ?>
   <div class="auth">
     <div class="tarjeta destacada">
       <h1>Iniciar sesión</h1>
       <?php mostrar_mensajes($mensaje, $errores); ?>
 
-      <form method="POST" action="login" class="formulario">
+      <form method="POST" action="login" class="formulario" novalidate>
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
         <label class="campo completo">Email
           <input type="email" name="email" value="<?= htmlspecialchars($email) ?>" required>

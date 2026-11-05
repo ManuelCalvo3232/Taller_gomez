@@ -22,9 +22,9 @@ body {
 }
 
 h1, h2, h3 { margin: 0 0 12px; line-height: 1.2; }
-h1 { font-size: 1.8rem; font-weight: 800; }
-h2 { font-size: 1.2rem; font-weight: 700; margin-top: 28px; }
-h3 { font-size: 1rem; font-weight: 700; margin-top: 16px; }
+h1 { font-size: 1.8rem; font-weight: 600; }
+h2 { font-size: 1.2rem; font-weight: 600; margin-top: 28px; }
+h3 { font-size: 1rem; font-weight: 600; margin-top: 16px; }
 a { color: var(--rojo); }
 
 /* Barra superior */
@@ -39,7 +39,7 @@ a { color: var(--rojo); }
 }
 .marca {
   color: var(--blanco);
-  font-weight: 800;
+  font-weight: 600;
   letter-spacing: .08em;
   text-decoration: none;
   border-left: 4px solid var(--rojo);
@@ -62,7 +62,8 @@ a { color: var(--rojo); }
   border-radius: 10px;
   padding: 20px;
   margin-bottom: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
+  border: 1px solid #DADADA;
   border-top: 3px solid transparent;
 }
 .tarjeta.destacada { border-top-color: var(--rojo); }
@@ -78,7 +79,7 @@ a { color: var(--rojo); }
   border-radius: 8px;
   padding: 10px 18px;
   font: inherit;
-  font-weight: 700;
+  font-weight: 600;
   cursor: pointer;
   text-decoration: none;
 }
@@ -122,7 +123,7 @@ a { color: var(--rojo); }
 .badge {
   display: inline-block;
   font-size: .75rem;
-  font-weight: 800;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: .05em;
   padding: 4px 10px;
@@ -155,7 +156,7 @@ a { color: var(--rojo); }
 /* Tiles del dashboard */
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 8px; }
 .stat { background: var(--gris-oscuro); color: var(--blanco); padding: 18px; border-radius: 10px; border-left: 4px solid var(--rojo); }
-.stat .valor { font-size: 1.6rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.stat .valor { font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .stat .etiqueta { font-size: .85rem; opacity: .8; }
 
 /* Horarios como botones */
@@ -196,7 +197,7 @@ a { color: var(--rojo); }
 }
 .etapas li.hecha { color: var(--carbon); font-weight: 600; }
 .etapas li.hecha::before { background: var(--carbon); }
-.etapas li.activa { color: var(--rojo); font-weight: 800; }
+.etapas li.activa { color: var(--rojo); font-weight: 600; }
 .etapas li.activa::before { background: var(--rojo); box-shadow: 0 0 0 4px rgba(230, 57, 70, .25); }
 
 /* Listas de trabajos como tarjetas */
@@ -205,7 +206,7 @@ a { color: var(--rojo); }
   background: var(--blanco);
   border-radius: 10px;
   padding: 16px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .06);
   border-left: 4px solid var(--carbon);
   display: flex;
   justify-content: space-between;
@@ -213,7 +214,7 @@ a { color: var(--rojo); }
   flex-wrap: wrap;
 }
 .item.asignado { border-left-color: var(--rojo); }
-.item .titulo { font-weight: 800; font-size: 1.05rem; }
+.item .titulo { font-weight: 600; font-size: 1.05rem; }
 .item .detalle { color: #555; font-size: .92rem; }
 .vacio { color: var(--gris-medio); font-style: italic; }
 
@@ -238,7 +239,7 @@ fieldset.tipo input[type="radio"] { accent-color: var(--rojo); width: 18px; heig
 /* Tarjetas del panel: la flecha no compite con los botones de acción */
 a.item { transition: border-left-color .15s; }
 a.item:hover { border-left-color: var(--rojo); }
-.flecha { color: var(--gris-medio); font-size: 1.4rem; font-weight: 800; transition: color .15s, transform .15s; }
+.flecha { color: var(--gris-medio); font-size: 1.4rem; font-weight: 600; transition: color .15s, transform .15s; }
 a.item:hover .flecha { color: var(--rojo); transform: translateX(4px); }
 
 /* Menú hamburguesa: solo en pantallas chicas */
@@ -275,4 +276,12 @@ a.item:hover .flecha { color: var(--rojo); transform: translateX(4px); }
   .barra.abierta .menu-toggle span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
   .barra.abierta .menu-toggle span:nth-child(2) { opacity: 0; }
   .barra.abierta .menu-toggle span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+}
+/* Validación al salir del campo */
+.campo .error-campo { color: var(--rojo); font-size: .875rem; font-weight: 400; }
+.campo input[aria-invalid="true"] { border-color: var(--rojo); }
+
+/* Respeta la preferencia del sistema: sin animaciones ni transiciones */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
 }

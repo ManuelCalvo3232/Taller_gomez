@@ -36,13 +36,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     exit;
 }
 
-inicio_html('Reenviar verificación');
+inicio_html('Reenviar verificación', '<script src="assets/validar.js" defer></script>');
 ?>
   <div class="auth">
     <div class="tarjeta destacada">
       <h1>Reenviar verificación</h1>
       <p>Ingresá el email de tu cuenta y te enviamos un nuevo enlace.</p>
-      <form method="POST" action="reenviar_verificacion" class="formulario">
+      <form method="POST" action="reenviar_verificacion" class="formulario" novalidate>
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
         <label class="campo completo">Email
           <input type="email" name="email" maxlength="150" value="<?= htmlspecialchars($email) ?>" required>

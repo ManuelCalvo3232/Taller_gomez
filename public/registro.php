@@ -69,14 +69,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-inicio_html('Crear cuenta');
+inicio_html('Crear cuenta', '<script src="assets/validar.js" defer></script>');
 ?>
   <div class="auth">
     <div class="tarjeta destacada">
       <h1>Crear cuenta</h1>
       <?php mostrar_mensajes('', $errores); ?>
 
-      <form method="POST" action="registro" class="formulario">
+      <form method="POST" action="registro" class="formulario" novalidate>
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
         <label class="campo">Nombre(s)
           <input type="text" name="nombre" maxlength="100" value="<?= htmlspecialchars($nombre) ?>" required>
@@ -88,7 +88,7 @@ inicio_html('Crear cuenta');
           <input type="email" name="email" maxlength="150" value="<?= htmlspecialchars($email) ?>" required>
         </label>
         <label class="campo completo">Clave
-          <input type="password" name="clave" required>
+          <input type="password" name="clave" required data-clave-nueva>
           <small>Mínimo 8 caracteres, con mayúscula, minúscula, número y símbolo.</small>
         </label>
         <div class="completo">
