@@ -303,7 +303,6 @@ a.item:hover .flecha { color: var(--grafito); }
    TALLER GÓMEZ — PREMIUM PUBLIC EXPERIENCE
    ========================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
   --premium-bg: #101820;
@@ -391,7 +390,7 @@ body:has(.auth) .tarjeta p {
 }
 
 body:has(.auth) .tarjeta a {
-  color: #806337;
+  color: var(--premium-bg);
   font-weight: 600;
   text-decoration-color: var(--premium-gold);
   text-underline-offset: 4px;
