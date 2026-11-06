@@ -177,7 +177,7 @@ inicio_html('Mis presupuestos');
             <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
             <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">
             <input type="hidden" name="accion" value="rechazar">
-            <button type="submit" class="btn btn-outline btn-grande">Rechazar</button>
+            <button type="submit" class="btn btn-peligro btn-grande">Rechazar</button>
           </form>
         </div>
       <?php endif; ?>

@@ -63,15 +63,30 @@ inicio_html('Panel');
       Cargá tu teléfono en Mi perfil. Es la única forma en que el taller puede avisarte.
     </a>
   <?php endif; ?>
-  <?php if ($pagosPendientes > 0): ?>
-    <a href="presupuestos" class="alerta alerta-error" style="display:block; text-decoration:none;">
-      Tenés <?= $pagosPendientes ?> presupuesto<?= $pagosPendientes === 1 ? '' : 's' ?> pendiente<?= $pagosPendientes === 1 ? '' : 's' ?> de pago · Ver presupuestos
-    </a>
-  <?php endif; ?>
   <?php if ($repuestosBajos > 0): ?>
     <a href="stock" class="alerta alerta-error" style="display:block; text-decoration:none;">
       <?= $repuestosBajos ?> repuesto<?= $repuestosBajos === 1 ? '' : 's' ?> con stock bajo · Ver stock
     </a>
+  <?php endif; ?>
+
+  <?php if ($rol === 'cliente'): ?>
+    <?php if ($pagosPendientes > 0): ?>
+      <section class="paso" aria-labelledby="paso-titulo">
+        <div>
+          <h2 id="paso-titulo">Tenés un presupuesto para pagar</h2>
+          <p>Revisalo y pagalo para que el taller entregue tu vehículo.</p>
+        </div>
+        <a href="presupuestos" class="btn">Revisar y pagar</a>
+      </section>
+    <?php else: ?>
+      <section class="paso" aria-labelledby="paso-titulo">
+        <div>
+          <h2 id="paso-titulo">¿Qué necesitás hacer?</h2>
+          <p>Pedí un turno para revisar tu vehículo.</p>
+        </div>
+        <a href="turno_nuevo" class="btn">Pedir turno</a>
+      </section>
+    <?php endif; ?>
   <?php endif; ?>
 
   <div class="lista">

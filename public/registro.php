@@ -72,6 +72,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 inicio_html('Crear cuenta', '<script src="assets/validar.js" defer></script>');
 ?>
   <div class="auth">
+    <aside class="hero">
+      <div class="placa">TALLER GÓMEZ<small>Taller mecánico</small></div>
+      <div>
+        <p class="hero-titulo">Tu auto, con presupuesto antes de tocar nada.</p>
+        <ul class="ficha">
+          <li><span>Turno</span><span>Online, desde el celular</span></li>
+          <li><span>Presupuesto</span><span>Lo aprobás antes de empezar</span></li>
+          <li><span>Pago</span><span>Online o en el taller</span></li>
+          <li><span>Avisos</span><span>Por mail cuando hay novedades</span></li>
+        </ul>
+      </div>
+    </aside>
     <div class="tarjeta destacada">
       <h1>Crear cuenta</h1>
       <?php mostrar_mensajes('', $errores); ?>

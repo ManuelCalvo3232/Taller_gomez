@@ -6,8 +6,8 @@
   --acero: #5C6470;        /* texto secundario */
   --humo: #EEF0F2;         /* fondo de la página */
   --papel: #FFFFFF;        /* fichas y campos */
-  --champan: #A88A55;      /* acento: filetes, foco, selección */
-  --champan-claro: #D9C49C;/* texto de acento sobre grafito */
+  --champan: #F26B1D;      /* acento: filetes, foco, selección */
+  --champan-claro: #FFB58A;/* texto de acento sobre grafito */
   --linea: #D3D7DC;        /* filetes y bordes */
   --error: #B42318;        /* solo mensajes de error */
   --radio: 2px;
@@ -82,8 +82,8 @@ a { color: var(--grafito); text-decoration-color: var(--champan); text-underline
 /* Botones */
 .btn {
   display: inline-block;
-  background: var(--grafito);
-  color: var(--papel);
+  background: var(--champan);
+  color: var(--grafito);
   border: 0;
   border-radius: var(--radio);
   padding: 12px 20px;
@@ -94,7 +94,9 @@ a { color: var(--grafito); text-decoration-color: var(--champan); text-underline
   box-shadow: inset 0 -2px 0 transparent;
   transition: box-shadow .15s;
 }
-.btn:hover { box-shadow: inset 0 -2px 0 var(--champan); }
+.btn:hover { box-shadow: inset 0 -2px 0 var(--grafito); }
+.btn-peligro { background: transparent; color: var(--error); box-shadow: inset 0 0 0 2px var(--error); }
+.btn-peligro:hover { background: var(--error); color: var(--papel); }
 .btn-oscuro { background: var(--acero); }
 .btn-outline { background: transparent; color: var(--grafito); box-shadow: inset 0 0 0 1px var(--grafito); }
 .btn-outline:hover { background: var(--grafito); color: var(--papel); box-shadow: inset 0 0 0 1px var(--grafito); }
@@ -120,7 +122,7 @@ a { color: var(--grafito); text-decoration-color: var(--champan); text-underline
 .campo input:focus, .campo select:focus, .campo textarea:focus {
   outline: none;
   border-color: var(--champan);
-  box-shadow: 0 0 0 3px rgba(168, 138, 85, .3);
+  box-shadow: 0 0 0 3px rgba(242, 107, 29, .3);
 }
 .completo { grid-column: 1 / -1; }
 .formulario .btn { justify-self: start; }
@@ -207,7 +209,7 @@ a { color: var(--grafito); text-decoration-color: var(--champan); text-underline
 .etapas li.hecha { color: var(--grafito); font-weight: 600; }
 .etapas li.hecha::before { background: var(--grafito); }
 .etapas li.activa { color: var(--grafito); font-weight: 600; }
-.etapas li.activa::before { background: var(--champan); box-shadow: 0 0 0 3px rgba(168, 138, 85, .3); }
+.etapas li.activa::before { background: var(--champan); box-shadow: 0 0 0 3px rgba(242, 107, 29, .3); }
 
 /* Listas como fichas con filete */
 .lista { display: grid; gap: 10px; }
@@ -306,7 +308,7 @@ a.item:hover .flecha { color: var(--grafito); }
 :root {
   --premium-bg: #101820;
   --premium-panel: #1D2935;
-  --premium-gold: #C6A66B;
+  --premium-gold: #F26B1D;
   --premium-ivory: #F5F3EE;
   --premium-steel: #A7ADB4;
 }
@@ -323,16 +325,16 @@ body:has(.auth) {
 /* Header */
 body:has(.auth) .barra {
   background: rgba(16, 24, 32, .96);
-  border-bottom: 1px solid rgba(198, 166, 107, .35);
+  border-bottom: 1px solid rgba(242, 107, 29, .35);
   box-shadow: none;
   padding: 22px 6%;
 }
 
 body:has(.auth) .marca {
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Archivo', sans-serif;
   font-size: 1rem;
   letter-spacing: .22em;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 body:has(.auth) .contenedor {
@@ -359,24 +361,6 @@ body:has(.auth) .auth {
 }
 
 /* Panel visual */
-body:has(.auth) .auth::before {
-  content: "";
-  display: block;
-  width: 100%;
-  min-height: 540px;
-  border-radius: 3px;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(16, 24, 32, .05),
-      rgba(16, 24, 32, .35) 55%,
-      rgba(16, 24, 32, .9)
-    ),
-    url("https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1400&q=85")
-    center / cover;
-  box-shadow: 0 24px 70px rgba(0, 0, 0, .25);
-}
-
 /* Tarjeta de formulario */
 body:has(.auth) .auth .tarjeta {
   width: 100%;
@@ -392,11 +376,11 @@ body:has(.auth) .auth .tarjeta {
 }
 
 body:has(.auth) h1 {
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Archivo', sans-serif;
   font-size: clamp(1.8rem, 3vw, 2.5rem);
   line-height: 1.15;
-  font-weight: 800;
-  letter-spacing: -.055em;
+  font-weight: 600;
+  letter-spacing: -.02em;
   margin-bottom: 14px;
   color: var(--premium-bg);
 }
@@ -453,7 +437,7 @@ body:has(.auth) .campo select:focus,
 body:has(.auth) .campo textarea:focus {
   outline: none;
   border-color: var(--premium-gold);
-  box-shadow: 0 0 0 3px rgba(198, 166, 107, .16);
+  box-shadow: 0 0 0 3px rgba(242, 107, 29, .16);
 }
 
 body:has(.auth) .campo small {
@@ -469,21 +453,21 @@ body:has(.auth) .completo {
 body:has(.auth) .btn {
   min-height: 50px;
   padding: 14px 22px;
-  background: var(--premium-bg);
-  color: var(--premium-ivory);
-  border: 1px solid var(--premium-bg);
+  background: var(--champan);
+  color: var(--premium-bg);
+  border: 1px solid var(--champan);
   border-radius: 2px;
-  font-family: 'Manrope', sans-serif;
+  font-family: 'Archivo', sans-serif;
   font-size: .83rem;
-  font-weight: 800;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: .02em;
+  text-transform: none;
   transition: background .2s, border-color .2s, transform .2s;
 }
 
 body:has(.auth) .btn:hover {
-  background: #293B4A;
-  border-color: var(--premium-gold);
+  background: #D85A14;
+  border-color: #D85A14;
   transform: translateY(-2px);
   box-shadow: none;
 }
@@ -521,12 +505,7 @@ body:has(.auth) .alerta-error {
     gap: 0;
   }
 
-  body:has(.auth) .auth::before {
-    min-height: 230px;
-    background-position: center 55%;
-  }
-
-  body:has(.auth) .auth .tarjeta {
+    body:has(.auth) .auth .tarjeta {
     max-width: none;
     padding: 35px 28px;
   }
@@ -541,11 +520,7 @@ body:has(.auth) .alerta-error {
     padding: 22px 16px 40px;
   }
 
-  body:has(.auth) .auth::before {
-    min-height: 180px;
-  }
-
-  body:has(.auth) .auth .tarjeta {
+    body:has(.auth) .auth .tarjeta {
     padding: 30px 22px;
   }
 
@@ -570,3 +545,115 @@ body:has(.auth) .alerta-error {
     animation: none !important;
   }
 }
+
+/* Panel de la marca: placa de patente, titular y ficha técnica. Sin imágenes externas */
+body:has(.auth) .hero {
+  min-height: 540px;
+  border-radius: 3px;
+  padding: 48px 44px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 40px;
+  background-color: #0C1116;
+  background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, .018) 0 1px, transparent 1px 3px);
+  box-shadow: inset 0 0 0 1px rgba(242, 107, 29, .18);
+  color: var(--premium-ivory);
+}
+
+body:has(.auth) .placa {
+  align-self: flex-start;
+  background: #E9E6DF;
+  color: #0C1116;
+  border: 2px solid #0C1116;
+  border-radius: 6px;
+  padding: 14px 26px;
+  box-shadow: inset 0 0 0 3px #E9E6DF, inset 0 0 0 4px rgba(12, 17, 22, .45);
+  font-family: 'Archivo', sans-serif;
+  font-stretch: 112%;
+  font-weight: 600;
+  font-size: 1.6rem;
+  letter-spacing: .14em;
+  line-height: 1.1;
+}
+
+body:has(.auth) .placa small {
+  display: block;
+  margin-top: 6px;
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .18em;
+}
+
+body:has(.auth) .hero-titulo {
+  margin: 0 0 28px;
+  font-family: 'Archivo', sans-serif;
+  font-stretch: 100%;
+  font-size: clamp(1.6rem, 2.6vw, 2.2rem);
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -.01em;
+  max-width: 18ch;
+}
+
+body:has(.auth) .ficha {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid rgba(242, 107, 29, .4);
+}
+
+body:has(.auth) .ficha li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid rgba(242, 107, 29, .2);
+  font-size: 1rem;
+}
+
+body:has(.auth) .ficha li span:first-child {
+  color: #A9B0B8;
+}
+
+body:has(.auth) .ficha li span:last-child {
+  text-align: right;
+}
+
+@media (min-width: 851px) {
+  body:has(.auth) .auth {
+    grid-template-columns: 1fr minmax(0, 470px);
+  }
+}
+
+@media (max-width: 850px) {
+  body:has(.auth) .hero {
+    min-height: 0;
+    padding: 28px 22px;
+    gap: 22px;
+  }
+  body:has(.auth) .hero-titulo {
+    margin-bottom: 0;
+    font-size: 1.35rem;
+  }
+  body:has(.auth) .ficha {
+    display: none;
+  }
+}
+
+/* Siguiente paso del cliente: una sola acción primaria por pantalla */
+.paso {
+  background: var(--papel);
+  border: 1px solid var(--linea);
+  border-left: 4px solid var(--champan);
+  border-radius: var(--radio);
+  padding: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.paso h2 { margin: 0 0 4px; font-size: 1.15rem; }
+.paso p { margin: 0; color: var(--acero); }
