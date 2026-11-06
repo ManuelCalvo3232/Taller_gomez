@@ -67,17 +67,15 @@ a { color: var(--grafito); text-decoration-color: var(--champan); text-underline
 
 /* Contenedor y fichas */
 .contenedor { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+/* Sección: sin caja. Un filete superior separa los bloques. */
 .tarjeta {
-  background: var(--papel);
-  border-radius: var(--radio);
-  padding: 24px;
-  margin-bottom: 16px;
-  border: 1px solid var(--linea);
-  border-top: 2px solid transparent;
+  padding: 24px 0;
+  margin: 0;
+  border-top: 1px solid var(--linea);
 }
-.tarjeta.destacada { border-top-color: var(--champan); }
+.tarjeta.destacada { border-top: 3px solid var(--champan); }
 .auth { max-width: 420px; margin: 40px auto; }
-.auth .tarjeta { border-top-color: var(--champan); }
+.auth .tarjeta { border-top: 0; }
 
 /* Botones */
 .btn {
@@ -164,11 +162,11 @@ a { color: var(--grafito); text-decoration-color: var(--champan); text-underline
 .tabla tr:last-child td { border-bottom: 0; }
 .tabla .num { text-align: right; font-variant-numeric: tabular-nums; }
 
-/* Indicadores del dashboard: fichas oscuras con acento champán */
+/* Indicadores del dashboard: cifras con filete, sin caja */
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-bottom: 8px; }
-.stat { background: var(--grafito); color: var(--papel); padding: 18px; border-radius: var(--radio); box-shadow: inset 0 -2px 0 var(--champan); }
+.stat { padding: 14px 0 0; border-top: 3px solid var(--grafito); }
 .stat .valor { font-family: "Archivo", "Inter", sans-serif; font-stretch: 112%; font-size: 1.6rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-.stat .etiqueta { font-size: .85rem; color: var(--champan-claro); }
+.stat .etiqueta { font-size: .85rem; color: var(--acero); }
 
 /* Horarios */
 .horarios { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -211,13 +209,11 @@ a { color: var(--grafito); text-decoration-color: var(--champan); text-underline
 .etapas li.activa { color: var(--grafito); font-weight: 600; }
 .etapas li.activa::before { background: var(--champan); box-shadow: 0 0 0 3px rgba(242, 107, 29, .3); }
 
-/* Listas como fichas con filete */
-.lista { display: grid; gap: 10px; }
+/* Listas: filas con divisor, sin caja */
+.lista { display: grid; gap: 0; }
 .item {
-  background: var(--papel);
-  border-radius: var(--radio);
-  padding: 16px 18px;
-  border: 1px solid var(--linea);
+  padding: 16px 0 16px 14px;
+  border-bottom: 1px solid var(--linea);
   border-left: 3px solid transparent;
   display: flex;
   justify-content: space-between;
@@ -369,9 +365,8 @@ body:has(.auth) .auth .tarjeta {
   background: var(--premium-ivory);
   color: var(--premium-bg);
   border: 0;
-  border-top: 3px solid var(--premium-gold);
-  border-radius: 2px;
-  box-shadow: 0 25px 70px rgba(0, 0, 0, .22);
+  border-radius: 0;
+  box-shadow: none;
 }
 
 body:has(.auth) h1 {
@@ -548,7 +543,7 @@ body:has(.auth) .alerta-error {
 /* Panel de la marca: placa de patente, titular y ficha técnica. Sin imágenes externas */
 body:has(.auth) .hero {
   min-height: 540px;
-  border-radius: 3px;
+  border-radius: 0;
   padding: 48px 44px;
   display: flex;
   flex-direction: column;
@@ -556,7 +551,7 @@ body:has(.auth) .hero {
   gap: 40px;
   background-color: #0C1116;
   background-image: repeating-linear-gradient(90deg, rgba(255, 255, 255, .018) 0 1px, transparent 1px 3px);
-  box-shadow: inset 0 0 0 1px rgba(242, 107, 29, .18);
+  box-shadow: none;
   color: var(--premium-ivory);
 }
 
@@ -642,12 +637,9 @@ body:has(.auth) .ficha li span:last-child {
 
 /* Siguiente paso del cliente: una sola acción primaria por pantalla */
 .paso {
-  background: var(--papel);
-  border: 1px solid var(--linea);
-  border-left: 4px solid var(--champan);
-  border-radius: var(--radio);
-  padding: 20px;
-  margin-bottom: 20px;
+  border-top: 3px solid var(--champan);
+  padding: 20px 0 24px;
+  margin-bottom: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
