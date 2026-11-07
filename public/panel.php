@@ -58,17 +58,8 @@ if ($rol === 'mecanico') {
 inicio_html('Panel');
 ?>
   <h1>Hola, <?= htmlspecialchars($nombre) ?></h1>
-  <?php if ($sinTelefono): ?>
-    <a href="perfil" class="alerta alerta-error" style="display:block; text-decoration:none;">
-      Cargá tu teléfono en Mi perfil. Es la única forma en que el taller puede avisarte.
-    </a>
-  <?php endif; ?>
-  <?php if ($repuestosBajos > 0): ?>
-    <a href="stock" class="alerta alerta-error" style="display:block; text-decoration:none;">
-      <?= $repuestosBajos ?> repuesto<?= $repuestosBajos === 1 ? '' : 's' ?> con stock bajo · Ver stock
-    </a>
-  <?php endif; ?>
-
+  <div class="panel-grid<?= ($sinTelefono || $repuestosBajos > 0) ? '' : ' solo' ?>">
+    <div class="panel-principal">
   <?php if ($rol === 'cliente'): ?>
     <?php if ($pagosPendientes > 0): ?>
       <section class="paso" aria-labelledby="paso-titulo">
@@ -99,6 +90,22 @@ inicio_html('Panel');
         <span class="flecha" aria-hidden="true">&rarr;</span>
       </a>
     <?php endforeach; ?>
+  </div>
+    </div>
+<?php if ($sinTelefono || $repuestosBajos > 0): ?>
+    <aside class="panel-lateral" aria-label="Avisos">
+  <?php if ($sinTelefono): ?>
+      <a href="perfil" class="alerta alerta-error" style="display:block; text-decoration:none;">
+        Cargá tu teléfono en Mi perfil. Es la única forma en que el taller puede avisarte.
+      </a>
+  <?php endif; ?>
+  <?php if ($repuestosBajos > 0): ?>
+      <a href="stock" class="alerta alerta-error" style="display:block; text-decoration:none;">
+        <?= $repuestosBajos ?> repuesto<?= $repuestosBajos === 1 ? '' : 's' ?> con stock bajo · Ver stock
+      </a>
+  <?php endif; ?>
+    </aside>
+<?php endif; ?>
   </div>
 <?php
 fin_html();

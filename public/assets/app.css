@@ -42,8 +42,8 @@ a { color: var(--grafito); text-decoration-color: var(--champan); text-underline
   color: var(--papel);
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 16px 24px;
+  gap: 32px;
+  padding: 12px 24px;
   flex-wrap: wrap;
   box-shadow: inset 0 -1px 0 var(--champan);
 }
@@ -55,9 +55,9 @@ a { color: var(--grafito); text-decoration-color: var(--champan); text-underline
   letter-spacing: .16em;
   text-decoration: none;
 }
-.menu { display: flex; gap: 20px; flex-wrap: wrap; }
-.menu a { color: var(--papel); text-decoration: none; opacity: .85; font-weight: 600; }
-.menu a:hover { opacity: 1; color: var(--champan-claro); }
+.menu { display: flex; gap: 24px; flex-wrap: wrap; }
+.menu a { color: var(--papel); text-decoration: none; opacity: .85; font-weight: 600; font-size: .92rem; padding: 4px 0; box-shadow: inset 0 -2px 0 transparent; }
+.menu a:hover { opacity: 1; color: var(--champan-claro); box-shadow: inset 0 -2px 0 var(--champan); }
 .salir { margin-left: auto; }
 .btn-link {
   background: none; border: 0; color: var(--papel);
@@ -648,3 +648,12 @@ body:has(.auth) .ficha li span:last-child {
 }
 .paso h2 { margin: 0 0 4px; font-size: 1.15rem; }
 .paso p { margin: 0; color: var(--acero); }
+
+/* Panel: dos columnas, principal a la izquierda y avisos a la derecha */
+.panel-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 40px; align-items: start; }
+.panel-grid.solo { grid-template-columns: minmax(0, 1fr); }
+.panel-lateral { border-top: 3px solid var(--champan); padding-top: 16px; display: grid; gap: 12px; }
+@media (max-width: 850px) {
+  .panel-grid, .panel-grid.solo { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .panel-lateral { margin-top: 16px; }
+}
