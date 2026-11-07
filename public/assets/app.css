@@ -217,6 +217,7 @@ a { color: var(--grafito); text-decoration-color: var(--champan); text-underline
   border-left: 3px solid transparent;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 16px;
   flex-wrap: wrap;
 }
@@ -656,4 +657,10 @@ body:has(.auth) .ficha li span:last-child {
 @media (max-width: 850px) {
   .panel-grid, .panel-grid.solo { grid-template-columns: minmax(0, 1fr); gap: 0; }
   .panel-lateral { margin-top: 16px; }
+}
+
+/* Dos columnas de igual ancho (listas de trabajo del mecánico) */
+.dos-columnas { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px; align-items: start; }
+@media (max-width: 850px) {
+  .dos-columnas { grid-template-columns: minmax(0, 1fr); gap: 0; }
 }

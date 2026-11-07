@@ -135,6 +135,8 @@ inicio_html('Mis presupuestos');
   <h1>Mis presupuestos</h1>
   <?php mostrar_mensajes($mensaje, $errores); ?>
 
+  <div class="panel-grid">
+    <div class="panel-principal">
   <?php if (empty($presupuestos)): ?>
     <p class="vacio">Todavía no tenés presupuestos.</p>
   <?php endif; ?>
@@ -201,6 +203,14 @@ inicio_html('Mis presupuestos');
       <?php endif; ?>
     </div>
   <?php endforeach; ?>
+    </div>
+    <aside class="panel-lateral" aria-label="Resumen">
+      <h2 style="margin:0 0 8px; font-size:1.05rem;">Resumen</h2>
+      <p style="margin:0"><strong>Para aprobar:</strong> <?= count(array_filter($presupuestos, fn($p) => $p['estado'] === 'enviado')) ?></p>
+      <p style="margin:0"><strong>Para pagar:</strong> <?= count(array_filter($presupuestos, fn($p) => $p['estado'] === 'aprobado' && $p['estado_pago'] !== 'aprobado')) ?></p>
+      <p class="detalle vacio" style="margin:8px 0 0">Podés pagar online o en el taller con efectivo o transferencia.</p>
+    </aside>
+  </div>
 
 <?php
 link_panel();

@@ -82,6 +82,8 @@ inicio_html('Trabajos');
   <h1>Trabajos</h1>
   <?php mostrar_mensajes($mensaje, $errores); ?>
 
+  <div class="dos-columnas">
+    <div>
   <h2>Sin asignar</h2>
   <?php if (empty($sinAsignar)): ?>
     <p class="vacio">No hay trabajos sin asignar.</p>
@@ -105,7 +107,8 @@ inicio_html('Trabajos');
       </div>
     <?php endforeach; ?>
   </div>
-
+    </div>
+    <div>
   <h2>Mis trabajos</h2>
   <?php if (empty($misTrabajos)): ?>
     <p class="vacio">No tenés trabajos asignados.</p>
@@ -121,6 +124,8 @@ inicio_html('Trabajos');
         <a class="btn btn-outline" href="trabajo?id=<?= (int) $t['id_trabajo'] ?>">Ver trabajo</a>
       </div>
     <?php endforeach; ?>
+  </div>
+    </div>
   </div>
 
 <?php
