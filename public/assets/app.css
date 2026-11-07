@@ -80,6 +80,7 @@ a { color: var(--grafito); text-decoration-color: var(--champan); text-underline
 /* Botones */
 .btn {
   display: inline-block;
+  min-height: 48px;
   background: var(--champan);
   color: var(--grafito);
   border: 0;
@@ -408,7 +409,7 @@ body:has(.auth) .formulario {
 body:has(.auth) .campo {
   color: #343E47;
   font-size: .82rem;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: .015em;
   gap: 9px;
 }
