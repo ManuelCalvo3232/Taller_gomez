@@ -194,7 +194,7 @@ mostrar_mensajes('', $error ? [$error] : []);
             <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
             <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
             <button type="submit" name="accion" value="aprobar" class="btn btn-grande">Aprobar</button>
-            <button type="submit" name="accion" value="rechazar" class="btn btn-outline">Rechazar</button>
+            <button type="submit" name="accion" value="rechazar" class="btn btn-peligro">Rechazar</button>
         </form>
     </section>
 <?php endif; ?>
