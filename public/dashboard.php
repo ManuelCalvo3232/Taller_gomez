@@ -99,11 +99,8 @@ inicio_html('Dashboard', $extraHead);
     </div>
   </div>
 
-  <h2>Insights</h2>
-  <div class="tarjeta">
-    <div id="insights" class="vacio">Cargando...</div>
-  </div>
-
+  <div class="panel-grid">
+    <div class="panel-principal">
   <h2>Trabajos activos</h2>
   <?php tablaTrabajos($activos); ?>
 
@@ -123,6 +120,12 @@ inicio_html('Dashboard', $extraHead);
         </tr>
       <?php endforeach; ?>
     </table>
+  </div>
+    </div>
+    <aside class="panel-lateral" aria-label="Insights">
+      <h2 style="margin:0 0 8px; font-size:1.05rem;">Insights</h2>
+      <div id="insights" class="vacio">Cargando...</div>
+    </aside>
   </div>
 
   <script>

@@ -273,15 +273,8 @@ inicio_html('Trabajo #' . $idTrabajo);
     <p><?= badge_estado($trabajo['estado']) ?></p>
   <?php endif; ?>
 
-  <div class="tarjeta">
-    <h3>Vehículo y cliente</h3>
-    <div class="detalle">
-      Dueño: <strong><?= htmlspecialchars($trabajo['cliente']) ?></strong> · Tel: <?= htmlspecialchars($trabajo['telefono'] ?? '-') ?><br>
-      Año <?= (int) $trabajo['anio'] ?> · <?= (int) $trabajo['kilometros'] ?> km<br>
-      Motivo del ingreso: <?= htmlspecialchars($trabajo['motivo']) ?>
-    </div>
-  </div>
-
+  <div class="panel-grid">
+    <div class="panel-principal">
   <div class="tarjeta <?= $diagnostico ? '' : 'destacada' ?>">
     <h3>Diagnóstico</h3>
     <?php if ($diagnostico): ?>
@@ -342,7 +335,16 @@ inicio_html('Trabajo #' . $idTrabajo);
       </div>
     </div>
   <?php endif; ?>
-
+    </div>
+    <aside class="panel-lateral" aria-label="Estado del trabajo">
+  <div class="tarjeta">
+    <h3>Vehículo y cliente</h3>
+    <div class="detalle">
+      Dueño: <strong><?= htmlspecialchars($trabajo['cliente']) ?></strong> · Tel: <?= htmlspecialchars($trabajo['telefono'] ?? '-') ?><br>
+      Año <?= (int) $trabajo['anio'] ?> · <?= (int) $trabajo['kilometros'] ?> km<br>
+      Motivo del ingreso: <?= htmlspecialchars($trabajo['motivo']) ?>
+    </div>
+  </div>
   <?php if ($presupuestoAprobado): ?>
     <div class="tarjeta <?= $presupuestoAprobado['metodo_cobro'] ? '' : 'destacada' ?>">
       <h3>Cobro</h3>
@@ -385,6 +387,8 @@ inicio_html('Trabajo #' . $idTrabajo);
       </form>
     </div>
   <?php endif; ?>
+    </aside>
+  </div>
 
   <p><a href="trabajos">← Volver a trabajos</a></p>
 <?php

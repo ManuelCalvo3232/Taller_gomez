@@ -126,6 +126,8 @@ inicio_html('Mis vehículos');
 <h1>Mis vehículos</h1>
 <?php mostrar_mensajes($mensaje, $errores); ?>
 
+<div class="dos-columnas">
+<div>
 <div class="lista">
   <?php if (!$misVehiculos): ?>
     <p class="vacio">Todavía no tenés vehículos cargados.</p>
@@ -153,8 +155,9 @@ inicio_html('Mis vehículos');
     </div>
   <?php endforeach; ?>
 </div>
-
-<section class="tarjeta" style="margin-top:24px">
+</div>
+<div>
+<section class="tarjeta" style="margin-top:0">
   <h2><?= $idEdicion > 0 ? 'Editar vehículo' : 'Agregar vehículo' ?></h2>
 
   <form method="post" action="vehiculos" id="form-vehiculo" class="formulario" novalidate>
@@ -172,6 +175,8 @@ inicio_html('Mis vehículos');
     </div>
   </form>
 </section>
+</div>
+</div>
 
 <script type="application/json" id="catalogo"><?= json_encode($catalogo, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
 <script type="application/json" id="inicial"><?= json_encode($valores, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>

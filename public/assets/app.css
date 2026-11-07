@@ -148,17 +148,18 @@ a { color: var(--grafito); text-decoration-color: var(--champan); text-underline
 
 /* Tablas: filetes finos, encabezado en acero */
 .tabla-wrap { overflow-x: auto; border-radius: var(--radio); }
-.tabla { width: 100%; border-collapse: collapse; background: var(--papel); }
+/* Tablas: sin caja, encabezado con filete grafito y filas aireadas */
+.tabla { width: 100%; border-collapse: collapse; background: transparent; }
 .tabla th {
-  background: var(--papel);
-  color: var(--acero);
+  background: transparent;
+  color: var(--grafito);
   text-align: left;
   padding: 10px 12px;
-  font-size: .8125rem;
+  font-size: .85rem;
   font-weight: 600;
-  border-bottom: 1px solid var(--grafito);
+  border-bottom: 2px solid var(--grafito);
 }
-.tabla td { padding: 12px; border-bottom: 1px solid var(--linea); vertical-align: top; }
+.tabla td { padding: 16px 12px; border-bottom: 1px solid var(--linea); vertical-align: top; }
 .tabla tr:last-child td { border-bottom: 0; }
 .tabla .num { text-align: right; font-variant-numeric: tabular-nums; }
 
