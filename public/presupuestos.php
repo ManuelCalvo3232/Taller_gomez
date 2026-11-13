@@ -1,4 +1,5 @@
 <?php
+
 require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/auth/acceso.php';
 require __DIR__ . '/../src/auth/flash.php';
@@ -15,7 +16,6 @@ $mensaje = flash_get();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verificar();
-
     $idPresupuesto = filter_var($_POST['id_presupuesto'] ?? '', FILTER_VALIDATE_INT);
     $accion = $_POST['accion'] ?? '';
 
@@ -69,19 +69,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new DomainException("No hay stock suficiente de {$r['nombre']}. Consultá con el taller.");
                 }
             }
-
             $mensaje = 'Presupuesto aprobado. El taller ya puede empezar la reparación.';
         } else {
             $mensaje = 'Presupuesto rechazado.';
         }
 
         $pdo->prepare("UPDATE presupuestos SET estado = ?, fecha_respuesta = NOW() WHERE id_presupuesto = ?")
-            ->execute([$nuevoEstado === 'aprobado' ? 'aprobado' : 'rechazado', $idPresupuesto]);
+            ->execute([$nuevoEstado, $idPresupuesto]);
+
         $pdo->prepare("UPDATE trabajos SET estado = ? WHERE id_trabajo = ?")
             ->execute([$nuevoEstado, $presupuesto['id_trabajo']]);
 
         $pdo->commit();
-
     } catch (DomainException $e) {
         if ($pdo->inTransaction()) {
             $pdo->rollBack();
@@ -122,7 +121,7 @@ $stmt->execute([$idCliente]);
 $presupuestos = $stmt->fetchAll();
 
 $stmtItems = $pdo->prepare(
-    "SELECT descripcion, cantidad, precio_unitario FROM items_presupuesto WHERE id_presupuesto = ?"
+    "SELECT descripcion, tipo, cantidad, precio_unitario FROM items_presupuesto WHERE id_presupuesto = ?"
 );
 foreach ($presupuestos as &$p) {
     $stmtItems->execute([$p['id_presupuesto']]);
@@ -130,88 +129,128 @@ foreach ($presupuestos as &$p) {
 }
 unset($p);
 
+$paraAprobar = count(array_filter($presupuestos, fn($p) => $p['estado'] === 'enviado'));
+$paraPagar = count(array_filter($presupuestos, fn($p) => $p['estado'] === 'aprobado' && $p['estado_pago'] !== 'aprobado'));
+
 inicio_html('Mis presupuestos');
 ?>
-  <h1>Mis presupuestos</h1>
+  <div class="encabezado-pagina">
+    <div>
+      <h1>Mis presupuestos</h1>
+      <p class="subtitulo">Revisá cada ítem antes de aprobar y elegí pagar online o en el taller.</p>
+    </div>
+  </div>
+
   <?php mostrar_mensajes($mensaje, $errores); ?>
 
   <div class="panel-grid">
     <div class="panel-principal">
-  <?php if (empty($presupuestos)): ?>
-    <p class="vacio">Todavía no tenés presupuestos.</p>
-  <?php endif; ?>
-
-  <?php foreach ($presupuestos as $p): ?>
-    <div class="tarjeta <?= $p['estado'] === 'enviado' ? 'destacada' : '' ?>">
-      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
-        <div>
-          <h3 style="margin:0">Presupuesto #<?= (int) $p['id_presupuesto'] ?> · <?= htmlspecialchars($p['modelo']) ?> · <?= htmlspecialchars($p['patente']) ?></h3>
-          <div class="detalle vacio">Enviado: <?= htmlspecialchars($p['fecha_envio']) ?></div>
-        </div>
-        <?= badge_estado($p['estado']) ?>
-      </div>
-
-      <div class="tabla-wrap" style="margin:14px 0;">
-        <table class="tabla">
-          <tr><th>Descripción</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Subtotal</th></tr>
-          <?php foreach ($p['items'] as $it): ?>
-            <tr>
-              <td><?= htmlspecialchars($it['descripcion']) ?></td>
-              <td class="num"><?= (int) $it['cantidad'] ?></td>
-              <td class="num">$ <?= number_format($it['precio_unitario'], 2, ',', '.') ?></td>
-              <td class="num">$ <?= number_format($it['cantidad'] * $it['precio_unitario'], 2, ',', '.') ?></td>
-            </tr>
-          <?php endforeach; ?>
-        </table>
-      </div>
-
-      <h2 style="margin:0 0 4px; text-align:right;">Total: $ <?= number_format($p['total'], 2, ',', '.') ?></h2>
-
-      <?php if ($p['estado'] === 'enviado'): ?>
-        <div class="acciones">
-          <form method="POST" action="presupuestos">
-            <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
-            <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">
-            <input type="hidden" name="accion" value="aprobar">
-            <button type="submit" class="btn btn-grande">Aprobar</button>
-          </form>
-          <form method="POST" action="presupuestos">
-            <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
-            <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">
-            <input type="hidden" name="accion" value="rechazar">
-            <button type="submit" class="btn btn-peligro btn-grande">Rechazar</button>
-          </form>
+      <?php if (empty($presupuestos)): ?>
+        <div class="tarjeta">
+          <p class="vacio" style="margin:0">Todavía no tenés presupuestos emitidos.</p>
         </div>
       <?php endif; ?>
 
-      <?php if ($p['estado'] === 'aprobado'): ?>
-        <div class="acciones" style="justify-content:flex-end;">
-          <?php if ($p['estado_pago'] === 'aprobado'): ?>
-            <span class="badge badge-cerrado">Pagado</span>
-            <?php if ($p['metodo_pago'] !== 'mercadopago'): ?>
-              <span class="detalle vacio">en el taller</span>
-            <?php endif; ?>
-          <?php else: ?>
-            <span class="detalle vacio">Podés pagarlo acá o en el taller con efectivo o transferencia.</span>
-            <form method="POST" action="pagar">
-              <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
-              <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">
-              <button type="submit" class="btn btn-grande">Pagar</button>
-            </form>
+      <?php foreach ($presupuestos as $p): ?>
+        <?php $pendienteAccion = $p['estado'] === 'enviado' || ($p['estado'] === 'aprobado' && $p['estado_pago'] !== 'aprobado'); ?>
+        <div class="tarjeta <?= $pendienteAccion ? 'destacada' : '' ?>">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+            <div>
+              <h3 style="margin:0 0 4px;">
+                Presupuesto #<?= (int) $p['id_presupuesto'] ?> · <?= htmlspecialchars($p['modelo']) ?>
+                <span class="patente-tag" style="margin-left:6px;"><?= htmlspecialchars($p['patente']) ?></span>
+              </h3>
+              <div class="detalle">Emitido: <?= date('d/m/Y H:i', strtotime($p['fecha_envio'])) ?></div>
+            </div>
+            <?= badge_estado($p['estado']) ?>
+          </div>
+
+          <div class="tabla-wrap" style="margin:14px 0;">
+            <table class="tabla">
+              <tr>
+                <th>Descripción</th>
+                <th>Tipo</th>
+                <th class="num">Cant.</th>
+                <th class="num">Precio</th>
+                <th class="num">Subtotal</th>
+              </tr>
+              <?php foreach ($p['items'] as $it): ?>
+                <tr>
+                  <td><?= htmlspecialchars($it['descripcion']) ?></td>
+                  <td><span class="badge"><?= ($it['tipo'] ?? '') === 'repuesto' ? 'Repuesto' : 'Mano de obra' ?></span></td>
+                  <td class="num"><?= (int) $it['cantidad'] ?></td>
+                  <td class="num">$ <?= number_format($it['precio_unitario'], 2, ',', '.') ?></td>
+                  <td class="num"><strong>$ <?= number_format($it['cantidad'] * $it['precio_unitario'], 2, ',', '.') ?></strong></td>
+                </tr>
+              <?php endforeach; ?>
+            </table>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; padding-top:6px;">
+            <div>
+              <?php if ($p['estado'] === 'aprobado' && $p['estado_pago'] === 'aprobado'): ?>
+                <span class="badge badge-cerrado">Pagado</span>
+                <span class="detalle" style="margin-left:8px;">
+                  <?= $p['metodo_pago'] === 'mercadopago' ? 'Online con Mercado Pago' : 'En el taller (' . htmlspecialchars((string) $p['metodo_pago']) . ')' ?>
+                </span>
+              <?php elseif ($p['estado'] === 'aprobado'): ?>
+                <span class="detalle">Podés pagar online ahora o al retirar el vehículo.</span>
+              <?php endif; ?>
+            </div>
+
+            <div style="text-align:right;">
+              <span class="subtitulo" style="font-size:0.75rem; text-transform:uppercase;">Total presupuesto</span>
+              <div class="mono" style="font-size:1.55rem; font-weight:800; color:#ffffff;">
+                $ <?= number_format($p['total'], 2, ',', '.') ?>
+              </div>
+            </div>
+          </div>
+
+          <?php if ($p['estado'] === 'enviado'): ?>
+            <div class="acciones" style="display:grid; grid-template-columns:1fr 1fr;">
+              <form method="POST" action="presupuestos">
+                <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+                <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">
+                <input type="hidden" name="accion" value="aprobar">
+                <button type="submit" class="btn btn-grande">Aprobar presupuesto</button>
+              </form>
+              <form method="POST" action="presupuestos">
+                <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+                <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">
+                <input type="hidden" name="accion" value="rechazar">
+                <button type="submit" class="btn btn-peligro btn-grande">Rechazar</button>
+              </form>
+            </div>
+          <?php elseif ($p['estado'] === 'aprobado' && $p['estado_pago'] !== 'aprobado'): ?>
+            <div class="acciones" style="justify-content:flex-end;">
+              <form method="POST" action="pagar" style="min-width:240px;">
+                <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
+                <input type="hidden" name="id_presupuesto" value="<?= (int) $p['id_presupuesto'] ?>">
+                <button type="submit" class="btn btn-grande">Pagar con Mercado Pago</button>
+              </form>
+            </div>
           <?php endif; ?>
         </div>
-      <?php endif; ?>
+      <?php endforeach; ?>
     </div>
-  <?php endforeach; ?>
-    </div>
+
     <aside class="panel-lateral" aria-label="Resumen">
-      <h2 style="margin:0 0 8px; font-size:1.05rem;">Resumen</h2>
-      <p style="margin:0"><strong>Para aprobar:</strong> <?= count(array_filter($presupuestos, fn($p) => $p['estado'] === 'enviado')) ?></p>
-      <p style="margin:0"><strong>Para pagar:</strong> <?= count(array_filter($presupuestos, fn($p) => $p['estado'] === 'aprobado' && $p['estado_pago'] !== 'aprobado')) ?></p>
-      <p class="detalle vacio" style="margin:8px 0 0">Podés pagar online o en el taller con efectivo o transferencia.</p>
+      <h2 style="margin:0 0 4px; font-size:1.02rem;">Resumen de cuenta</h2>
+      <div class="item" style="padding:12px 14px;">
+        <span class="detalle" style="margin:0;">Para aprobar</span>
+        <strong class="mono" style="font-size:1.1rem; color:<?= $paraAprobar > 0 ? '#fdba74' : '#ffffff' ?>;"><?= $paraAprobar ?></strong>
+      </div>
+      <div class="item" style="padding:12px 14px;">
+        <span class="detalle" style="margin:0;">Para pagar</span>
+        <strong class="mono" style="font-size:1.1rem; color:<?= $paraPagar > 0 ? '#fdba74' : '#ffffff' ?>;"><?= $paraPagar ?></strong>
+      </div>
+      <div style="font-size:0.82rem; color:var(--text-secondary); line-height:1.5; padding-top:4px;">
+        <strong style="color:#ffffff; display:block; margin-bottom:4px;">Medios de pago aceptados</strong>
+        • Mercado Pago (tarjeta, débito o dinero en cuenta)<br>
+        • Efectivo o transferencia al retirar en el taller
+      </div>
     </aside>
   </div>
-
 <?php
 link_panel();
 fin_html();
