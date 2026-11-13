@@ -70,7 +70,7 @@ if ($rol === 'cliente') {
     $stmt->execute([$idCliente]);
     $pagosPendientes = (int) $stmt->fetchColumn();
 
-    // Trabajo activo más reciente para seguimiento en vivo
+    // Trabajo en curso o listo pendiente de pago/retiro (los ya finalizados y cobrados pasan solo a Historial)
     $stmt = $pdo->prepare(
         "SELECT t.id_trabajo, t.estado, tu.fecha_hora, tu.motivo,
                 v.modelo, v.patente, v.kilometros,
@@ -81,7 +81,22 @@ if ($rol === 'cliente') {
          JOIN vehiculos v ON v.id_vehiculo = tu.id_vehiculo
          LEFT JOIN usuarios m ON m.id_usuario = t.id_mecanico
          LEFT JOIN diagnosticos d ON d.id_trabajo = t.id_trabajo
-         WHERE v.id_cliente = ? AND t.estado <> 'rechazado'
+         WHERE v.id_cliente = ?
+           AND (
+             t.estado NOT IN ('listo', 'rechazado')
+             OR (
+               t.estado = 'listo'
+               AND EXISTS (
+                 SELECT 1 FROM presupuestos p
+                 WHERE p.id_trabajo = t.id_trabajo
+                   AND p.estado = 'aprobado'
+                   AND NOT EXISTS (
+                     SELECT 1 FROM pagos pg
+                     WHERE pg.id_presupuesto = p.id_presupuesto AND pg.estado = 'aprobado'
+                   )
+               )
+             )
+           )
          ORDER BY (t.estado = 'listo') ASC, tu.fecha_hora DESC
          LIMIT 1"
     );
@@ -191,70 +206,104 @@ inicio_html('Panel');
 
     <!-- Live Vehicle Tracking Card -->
     <?php if ($trabajoActivo && $indiceActivo >= 0): ?>
-      <div class="tracking-section-head">
-        <h2 class="tracking-section-title"><?= icono_svg('wrench') ?><span>Vehículo en Servicio Activo</span></h2>
-        <span class="live-pill"><span class="live-dot"></span>Seguimiento en tiempo real</span>
-      </div>
+      <?php $estaListo = $trabajoActivo['estado'] === 'listo'; ?>
+      <div id="bloque-tracking" data-trabajo-id="<?= (int) $trabajoActivo['id_trabajo'] ?>" data-listo="<?= $estaListo ? '1' : '0' ?>">
+        <div class="tracking-section-head">
+          <h2 class="tracking-section-title">
+            <?= icono_svg($estaListo ? 'check' : 'wrench') ?>
+            <span><?= $estaListo ? 'Vehículo Listo para Retirar' : 'Vehículo en Servicio Activo' ?></span>
+          </h2>
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <?php if ($estaListo): ?>
+              <a href="historial" style="font-size:0.78rem; font-weight:700;">Ver en Historial →</a>
+              <button type="button" id="btn-ocultar-listo" class="quick-chip" style="padding:4px 10px;">
+                Ya lo retiré / Ocultar
+              </button>
+            <?php else: ?>
+              <span class="live-pill"><span class="live-dot"></span>Seguimiento en tiempo real</span>
+            <?php endif; ?>
+          </div>
+        </div>
 
-      <section class="tracking-box" aria-label="Seguimiento del vehículo">
-        <div class="tracking-header">
-          <div class="tracking-vehicle">
-            <div class="tracking-avatar"><?= icono_svg('car') ?></div>
-            <div>
-              <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <h3 style="margin:0; font-size:1.1rem;"><?= htmlspecialchars($trabajoActivo['modelo']) ?></h3>
-                <span class="patente-placa"><?= htmlspecialchars($trabajoActivo['patente']) ?></span>
+        <section class="tracking-box" aria-label="Seguimiento del vehículo">
+          <div class="tracking-header">
+            <div class="tracking-vehicle">
+              <div class="tracking-avatar"><?= icono_svg('car') ?></div>
+              <div>
+                <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                  <h3 style="margin:0; font-size:1.1rem;"><?= htmlspecialchars($trabajoActivo['modelo']) ?></h3>
+                  <span class="patente-placa"><?= htmlspecialchars($trabajoActivo['patente']) ?></span>
+                </div>
+                <p class="subtitulo" style="margin-top:4px;">
+                  Orden #<?= (int) $trabajoActivo['id_trabajo'] ?> · <?= htmlspecialchars($trabajoActivo['motivo']) ?>
+                </p>
               </div>
-              <p class="subtitulo" style="margin-top:4px;">
-                Orden #<?= (int) $trabajoActivo['id_trabajo'] ?> · <?= htmlspecialchars($trabajoActivo['motivo']) ?>
-              </p>
             </div>
-          </div>
-          <?= badge_estado($trabajoActivo['estado']) ?>
-        </div>
-
-        <div class="tracking-body">
-          <ol class="etapas">
-            <?php foreach ($etapasCliente as $i => $etapa): ?>
-              <li class="<?= $i < $indiceActivo ? 'hecha' : ($i === $indiceActivo ? 'activa' : '') ?>"><?= $etapa ?></li>
-            <?php endforeach; ?>
-          </ol>
-
-          <div class="tracking-meta-grid">
-            <div class="meta-tile">
-              <span>Fecha del turno</span>
-              <strong><?= date('d/m/Y · H:i', strtotime($trabajoActivo['fecha_hora'])) ?> hs</strong>
-            </div>
-            <div class="meta-tile">
-              <span>Mecánico asignado</span>
-              <strong><?= htmlspecialchars($trabajoActivo['mecanico'] ?? 'Por asignar en recepción') ?></strong>
-            </div>
-            <div class="meta-tile">
-              <span>Kilometraje ingresado</span>
-              <strong class="mono"><?= number_format((int) $trabajoActivo['kilometros'], 0, ',', '.') ?> km</strong>
-            </div>
-            <div class="meta-tile">
-              <span>Presupuestos</span>
-              <strong>
-                <?php if ($presupuestosParaAprobar > 0): ?>
-                  <a href="presupuestos">Tenés <?= $presupuestosParaAprobar ?> para aprobar →</a>
-                <?php elseif ($pagosPendientes > 0): ?>
-                  <a href="presupuestos">Tenés <?= $pagosPendientes ?> para abonar →</a>
-                <?php else: ?>
-                  Al día
-                <?php endif; ?>
-              </strong>
-            </div>
+            <?= badge_estado($trabajoActivo['estado']) ?>
           </div>
 
-          <?php if (!empty($trabajoActivo['diagnostico'])): ?>
-            <div class="meta-tile" style="border-left:3px solid var(--accent);">
-              <span>Diagnóstico técnico del taller</span>
-              <strong style="font-weight:500; color:var(--text-primary);"><?= nl2br(htmlspecialchars($trabajoActivo['diagnostico'])) ?></strong>
+          <div class="tracking-body">
+            <ol class="etapas">
+              <?php foreach ($etapasCliente as $i => $etapa): ?>
+                <li class="<?= $i < $indiceActivo ? 'hecha' : ($i === $indiceActivo ? 'activa' : '') ?>"><?= $etapa ?></li>
+              <?php endforeach; ?>
+            </ol>
+
+            <div class="tracking-meta-grid">
+              <div class="meta-tile">
+                <span>Fecha del turno</span>
+                <strong><?= date('d/m/Y · H:i', strtotime($trabajoActivo['fecha_hora'])) ?> hs</strong>
+              </div>
+              <div class="meta-tile">
+                <span>Mecánico asignado</span>
+                <strong><?= htmlspecialchars($trabajoActivo['mecanico'] ?? 'Por asignar en recepción') ?></strong>
+              </div>
+              <div class="meta-tile">
+                <span>Kilometraje ingresado</span>
+                <strong class="mono"><?= number_format((int) $trabajoActivo['kilometros'], 0, ',', '.') ?> km</strong>
+              </div>
+              <div class="meta-tile">
+                <span>Presupuestos</span>
+                <strong>
+                  <?php if ($presupuestosParaAprobar > 0): ?>
+                    <a href="presupuestos">Tenés <?= $presupuestosParaAprobar ?> para aprobar →</a>
+                  <?php elseif ($pagosPendientes > 0): ?>
+                    <a href="presupuestos">Tenés <?= $pagosPendientes ?> para abonar →</a>
+                  <?php else: ?>
+                    Al día
+                  <?php endif; ?>
+                </strong>
+              </div>
             </div>
-          <?php endif; ?>
-        </div>
-      </section>
+
+            <?php if (!empty($trabajoActivo['diagnostico'])): ?>
+              <div class="meta-tile" style="border-left:3px solid var(--accent);">
+                <span>Diagnóstico técnico del taller</span>
+                <strong style="font-weight:500; color:var(--text-primary);"><?= nl2br(htmlspecialchars($trabajoActivo['diagnostico'])) ?></strong>
+              </div>
+            <?php endif; ?>
+          </div>
+        </section>
+      </div>
+      <?php if ($estaListo): ?>
+        <script>
+          (() => {
+            const bloque = document.getElementById('bloque-tracking');
+            const btn = document.getElementById('btn-ocultar-listo');
+            if (!bloque) return;
+            const key = 'tg_ocultar_trabajo_' + bloque.dataset.trabajoId;
+            if (localStorage.getItem(key) === '1') {
+              bloque.hidden = true;
+            }
+            if (btn) {
+              btn.addEventListener('click', () => {
+                localStorage.setItem(key, '1');
+                bloque.hidden = true;
+              });
+            }
+          })();
+        </script>
+      <?php endif; ?>
     <?php endif; ?>
 
     <!-- 4 Hub Cards Modulares -->
