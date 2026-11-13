@@ -17,29 +17,36 @@ $mensaje = flash_get();
 
 function html_alerta_stock(array $bajos, string $quien): string
 {
-    $celda = 'padding:8px;border-bottom:1px solid #EDEDED;';
+    $celda = 'padding:11px 12px; border-bottom:1px solid #262b35; color:#f9fafb;';
     $filas = '';
     foreach ($bajos as $r) {
         $filas .= '<tr>'
-            . '<td style="' . $celda . '">' . htmlspecialchars($r['nombre']) . '</td>'
-            . '<td style="' . $celda . '">' . htmlspecialchars($r['marca_vehiculo'] ?? '—') . '</td>'
-            . '<td style="' . $celda . 'text-align:right;">' . (int) $r['stock'] . '</td>'
-            . '<td style="' . $celda . 'text-align:right;">' . (int) $r['stock_minimo'] . '</td>'
+            . '<td style="' . $celda . 'font-weight:700;">' . htmlspecialchars($r['nombre']) . '</td>'
+            . '<td style="' . $celda . 'color:#9ca3af;">' . htmlspecialchars($r['marca_vehiculo'] ?? '—') . '</td>'
+            . '<td style="' . $celda . 'text-align:right; font-family:monospace; color:#fca5a5; font-weight:700;">' . (int) $r['stock'] . '</td>'
+            . '<td style="' . $celda . 'text-align:right; font-family:monospace; color:#9ca3af;">' . (int) $r['stock_minimo'] . '</td>'
             . '</tr>';
     }
-    return '<div style="font-family:Inter,Arial,sans-serif;max-width:560px;margin:0 auto;background:#F2F2F2;padding:24px;">'
-        . '<div style="background:#171717;color:#FFFFFF;padding:16px 20px;border-left:4px solid #E63946;font-weight:800;letter-spacing:.08em;">TALLER GÓMEZ</div>'
-        . '<div style="background:#FFFFFF;padding:24px 20px;color:#171717;">'
-        . '<h2 style="margin:0 0 12px;">Alerta de stock bajo</h2>'
-        . '<p>' . htmlspecialchars($quien) . ' avisó que estos repuestos están en el mínimo o por debajo:</p>'
-        . '<table style="width:100%;border-collapse:collapse;font-size:14px;">'
-        . '<tr style="background:#171717;color:#FFFFFF;">'
-        . '<th style="padding:10px 8px;text-align:left;">Repuesto</th>'
-        . '<th style="padding:10px 8px;text-align:left;">Vehículo</th>'
-        . '<th style="padding:10px 8px;text-align:right;">Stock</th>'
-        . '<th style="padding:10px 8px;text-align:right;">Mínimo</th></tr>'
-        . $filas . '</table>'
-        . '</div></div>';
+
+    $appUrl = rtrim(getenv('APP_URL') ?: 'http://localhost:8000', '/');
+    $contenido = '
+      <p style="margin:0 0 18px; color:#d1d5db;">
+        <strong style="color:#ffffff;">' . htmlspecialchars($quien) . '</strong> informó que los siguientes repuestos están en el mínimo o por debajo:
+      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0d0f13; border:1px solid #262b35; border-radius:12px; overflow:hidden; margin:0 0 20px; font-size:13px;">
+        <tr style="background-color:#111317;">
+          <th style="padding:10px 12px; text-align:left; color:#9ca3af; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #262b35;">Repuesto</th>
+          <th style="padding:10px 12px; text-align:left; color:#9ca3af; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #262b35;">Vehículo</th>
+          <th style="padding:10px 12px; text-align:right; color:#9ca3af; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #262b35;">Stock</th>
+          <th style="padding:10px 12px; text-align:right; color:#9ca3af; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #262b35;">Mínimo</th>
+        </tr>' . $filas . '
+      </table>
+      <a href="' . htmlspecialchars($appUrl . '/stock', ENT_QUOTES, 'UTF-8') . '"
+         style="display:block; background-color:#ea580c; color:#ffffff; text-decoration:none; font-weight:700; font-size:14px; padding:13px 18px; border-radius:10px; text-align:center;">
+        Gestionar inventario y reposición
+      </a>';
+
+    return plantilla_mail_taller('Stock crítico', 'Alerta de stock bajo en el taller', $contenido);
 }
 
 function datos_repuesto(array $p, array &$errores): array

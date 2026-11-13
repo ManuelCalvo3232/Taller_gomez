@@ -10,10 +10,13 @@ const remitente = {
   name: process.env.MAIL_FROM_NAME ?? 'Taller Gómez',
 };
 
-// Escapa los datos del usuario antes de meterlos en el HTML del mail
 function escapar(texto) {
   return String(texto).replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#39;',
   })[c]);
 }
 
@@ -21,62 +24,123 @@ function pesos(valor) {
   return '$ ' + Number(valor).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-// Encabezado y pie comunes a todos los mails del taller
-function envoltorio(contenido) {
-  return `
-  <div style="font-family:Inter,Arial,sans-serif; max-width:560px; margin:0 auto; background:#F2F2F2; padding:24px;">
-    <div style="background:#171717; color:#FFFFFF; padding:16px 20px; border-left:4px solid #E63946; font-weight:800; letter-spacing:.08em;">
-      TALLER GÓMEZ
-    </div>
-    <div style="background:#FFFFFF; padding:24px 20px;">
-      ${contenido}
-    </div>
-  </div>`;
+// Encabezado y pie comunes en sintonía con la web Dark Graphite & Orange de Taller Gómez
+function envoltorio({ kicker, titulo, cuerpo, pie = 'Taller Gómez · Tu vehículo, con presupuesto antes de tocar nada.' }) {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0; padding:0; background-color:#0a0a0c; font-family:'Plus Jakarta Sans','Inter',Arial,sans-serif; color:#f9fafb;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0a0a0c; padding:28px 14px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:580px; background-color:#16191f; border:1px solid #262b35; border-radius:16px; overflow:hidden;">
+          <tr>
+            <td style="background-color:#111317; padding:18px 24px; border-bottom:2px solid #ea580c;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="vertical-align:middle;">
+                    <span style="display:inline-block; background-color:#ea580c; color:#ffffff; font-weight:800; font-size:13px; padding:6px 9px; border-radius:7px; letter-spacing:0.02em; vertical-align:middle;">TG</span>
+                    <span style="display:inline-block; color:#ffffff; font-weight:800; font-size:15px; letter-spacing:0.12em; margin-left:10px; vertical-align:middle;">TALLER GÓMEZ</span>
+                  </td>
+                  <td align="right" style="vertical-align:middle;">
+                    <span style="display:inline-block; background-color:#1c2028; border:1px solid #374151; color:#fb923c; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; padding:4px 10px; border-radius:999px;">${escapar(kicker)}</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 24px; color:#f9fafb; font-size:15px; line-height:1.6;">
+              <h1 style="margin:0 0 14px; font-size:22px; line-height:1.25; font-weight:800; color:#ffffff; letter-spacing:-0.02em;">${escapar(titulo)}</h1>
+              ${cuerpo}
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color:#111317; padding:16px 24px; border-top:1px solid #262b35; font-size:12px; color:#6b7280; line-height:1.5;">
+              ${pie}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
 }
 
 export function plantillaListo({ nombre, modelo, patente, idTrabajo }) {
-  return envoltorio(`
-      <h2 style="margin:0 0 12px; color:#171717;">Tu vehículo está listo</h2>
-      <p style="color:#171717;">Hola ${escapar(nombre)}, tu ${escapar(modelo)} (${escapar(patente)}) ya está listo para retirar.</p>
-      <p style="color:#8A8A8A; font-size:13px; margin-bottom:0;">Trabajo #${Number(idTrabajo)}</p>
-  `);
+  const appUrl = (process.env.APP_URL ?? 'http://localhost:8000').replace(/\/$/, '');
+  return envoltorio({
+    kicker: 'Listo para retirar',
+    titulo: '¡Tu vehículo está listo!',
+    cuerpo: `
+      <p style="margin:0 0 16px; color:#d1d5db;">
+        Hola <strong style="color:#ffffff;">${escapar(nombre)}</strong>, terminamos los trabajos sobre tu
+        <strong style="color:#ffffff;">${escapar(modelo)}</strong>
+        <span style="display:inline-block; margin-left:4px; background-color:#f8fafc; color:#090d16; font-family:monospace; font-size:12px; font-weight:800; padding:2px 7px; border-radius:4px;">${escapar(patente)}</span>.
+      </p>
+
+      <div style="margin:0 0 18px;">
+        <span style="display:inline-block; background-color:rgba(16,185,129,0.14); border:1px solid rgba(16,185,129,0.35); color:#6ee7b7; font-size:12px; font-weight:700; padding:6px 12px; border-radius:8px;">
+          ✓ Control final aprobado · Listo para entrega
+        </span>
+      </div>
+
+      <div style="background-color:#0d0f13; border:1px solid #262b35; border-radius:10px; padding:14px 16px; margin:0 0 20px; font-size:13px; color:#9ca3af; line-height:1.6;">
+        Podés pasar a retirarlo por el taller. Si todavía tenés saldo pendiente, podés abonarlo online desde tu cuenta o presencialmente al retirar.
+      </div>
+
+      <a href="${escapar(appUrl + '/panel')}"
+         style="display:block; background-color:#ea580c; color:#ffffff; text-decoration:none; font-weight:700; font-size:15px; padding:14px 20px; border-radius:10px; text-align:center;">
+        Ver mi portal de cliente
+      </a>`,
+    pie: `Orden de trabajo #${Number(idTrabajo)} · Taller Gómez`,
+  });
 }
 
 export function plantillaPresupuesto({ nombre, modelo, patente, idTrabajo, idPresupuesto, total, items, urlAprobar }) {
   const filas = items.map((it) => `
-        <tr>
-          <td style="padding:8px; border-bottom:1px solid #EDEDED;">${escapar(it.descripcion)}</td>
-          <td style="padding:8px; border-bottom:1px solid #EDEDED; text-align:right;">${Number(it.cantidad)}</td>
-          <td style="padding:8px; border-bottom:1px solid #EDEDED; text-align:right;">${pesos(it.precio_unitario)}</td>
-          <td style="padding:8px; border-bottom:1px solid #EDEDED; text-align:right;">${pesos(it.cantidad * it.precio_unitario)}</td>
-        </tr>`).join('');
+    <tr>
+      <td style="padding:11px 12px; border-bottom:1px solid #262b35; color:#f9fafb;">${escapar(it.descripcion)}</td>
+      <td style="padding:11px 12px; border-bottom:1px solid #262b35; text-align:right; color:#d1d5db; font-family:monospace;">${Number(it.cantidad)}</td>
+      <td style="padding:11px 12px; border-bottom:1px solid #262b35; text-align:right; color:#d1d5db; font-family:monospace;">${pesos(it.precio_unitario)}</td>
+      <td style="padding:11px 12px; border-bottom:1px solid #262b35; text-align:right; color:#ffffff; font-weight:700; font-family:monospace;">${pesos(it.cantidad * it.precio_unitario)}</td>
+    </tr>`).join('');
 
-  return envoltorio(`
-      <h2 style="margin:0 0 12px; color:#171717;">Presupuesto para tu vehículo</h2>
-      <p style="color:#171717;">Hola ${escapar(nombre)}, te enviamos el presupuesto para tu ${escapar(modelo)} (${escapar(patente)}).</p>
+  return envoltorio({
+    kicker: `Presupuesto #${Number(idPresupuesto)}`,
+    titulo: 'Presupuesto para tu vehículo',
+    cuerpo: `
+      <p style="margin:0 0 18px; color:#d1d5db;">
+        Hola <strong style="color:#ffffff;">${escapar(nombre)}</strong>, ya revisamos tu
+        <strong style="color:#ffffff;">${escapar(modelo)}</strong>
+        <span style="display:inline-block; margin-left:4px; background-color:#f8fafc; color:#090d16; font-family:monospace; font-size:12px; font-weight:800; padding:2px 7px; border-radius:4px;">${escapar(patente)}</span>.
+        Necesitamos tu aprobación antes de comenzar:
+      </p>
 
-      <table style="width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; color:#171717;">
-        <tr style="background:#171717; color:#FFFFFF;">
-          <th style="padding:10px 8px; text-align:left;">Descripción</th>
-          <th style="padding:10px 8px; text-align:right;">Cant.</th>
-          <th style="padding:10px 8px; text-align:right;">Precio</th>
-          <th style="padding:10px 8px; text-align:right;">Subtotal</th>
-        </tr>${filas}
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#0d0f13; border:1px solid #262b35; border-radius:12px; overflow:hidden; margin:0 0 18px; font-size:13px;">
+        <tr style="background-color:#111317;">
+          <th style="padding:10px 12px; text-align:left; color:#9ca3af; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #262b35;">Descripción</th>
+          <th style="padding:10px 12px; text-align:right; color:#9ca3af; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #262b35;">Cant.</th>
+          <th style="padding:10px 12px; text-align:right; color:#9ca3af; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #262b35;">Precio</th>
+          <th style="padding:10px 12px; text-align:right; color:#9ca3af; font-size:11px; text-transform:uppercase; letter-spacing:0.05em; border-bottom:1px solid #262b35;">Subtotal</th>
+        </tr>
+        ${filas}
       </table>
 
-      <p style="text-align:right; font-size:18px; font-weight:800; color:#171717; margin:8px 0 20px;">
-        Total: ${pesos(total)}
-      </p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#111317; border:1px solid rgba(234,88,12,0.45); border-left:3px solid #ea580c; border-radius:10px; margin:0 0 22px;">
+        <tr>
+          <td style="padding:14px 16px; color:#fdba74; font-size:13px; text-transform:uppercase; font-weight:700; letter-spacing:0.05em;">Total presupuesto</td>
+          <td style="padding:14px 16px; text-align:right; color:#ffffff; font-family:monospace; font-size:21px; font-weight:800;">${pesos(total)}</td>
+        </tr>
+      </table>
 
       <a href="${escapar(urlAprobar)}"
-         style="display:block; text-align:center; background:#E63946; color:#FFFFFF; text-decoration:none; font-weight:700; padding:14px; border-radius:8px;">
-        Revisar y aprobar
-      </a>
-
-      <p style="color:#8A8A8A; font-size:13px; margin:16px 0 0;">
-        El link vence en 7 días y solo se puede usar una vez. Trabajo #${Number(idTrabajo)} · Presupuesto #${Number(idPresupuesto)}
-      </p>
-  `);
+         style="display:block; background-color:#ea580c; color:#ffffff; text-decoration:none; font-weight:700; font-size:15px; padding:14px 20px; border-radius:10px; text-align:center;">
+        Revisar y aprobar presupuesto
+      </a>`,
+    pie: `El enlace vence en 7 días y es de un solo uso. Trabajo #${Number(idTrabajo)} · Presupuesto #${Number(idPresupuesto)}.`,
+  });
 }
 
 // Envía el mail con Brevo y deja registro en la tabla notificaciones. Devuelve true si salió bien
