@@ -13,7 +13,6 @@ requerir_rol('cliente');
 $config = require __DIR__ . '/../config/config.php';
 $pdo = conectar();
 
-// Horarios de turno: cada 30 minutos entre 08:00 y 17:30
 $horarios = [];
 for ($min = 8 * 60; $min <= 17 * 60 + 30; $min += 30) {
     $horarios[] = sprintf('%02d:%02d', intdiv($min, 60), $min % 60);
@@ -21,6 +20,7 @@ for ($min = 8 * 60; $min <= 17 * 60 + 30; $min += 30) {
 
 $anioMax = (int) date('Y') + 1;
 $errores = [];
+
 $camposVehiculo = [
     'tipo', 'patente', 'marca_id', 'marca_otra', 'modelo_id', 'modelo_otro',
     'anio', 'kilometros', 'cilindrada',
@@ -30,7 +30,6 @@ $v['tipo'] = 'auto';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     csrf_verificar();
-
     foreach (array_keys($v) as $campo) {
         $v[$campo] = trim((string) ($_POST[$campo] ?? ''));
     }
@@ -55,7 +54,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fechaHora = $fechaValida && in_array($v['hora'], $horarios, true)
         ? $v['fecha'] . ' ' . $v['hora'] . ':00'
         : null;
-
     if ($fechaHora !== null && $fechaHora <= date('Y-m-d H:i:s')) {
         $errores[] = 'Elegí un horario futuro.';
     }
@@ -64,7 +62,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $pdo->beginTransaction();
 
-            // Si el cliente ya tiene ese vehículo (misma patente), se actualizan sus datos
             $stmt = $pdo->prepare('SELECT id_vehiculo FROM vehiculos WHERE patente = ? AND id_cliente = ?');
             $stmt->execute([$datos['patente'], $_SESSION['usuario_id']]);
             $idVehiculo = $stmt->fetchColumn();
@@ -95,7 +92,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ->execute([$idTurno]);
 
             $pdo->commit();
-
             flash_set('Turno reservado. Te avisamos por mail cuando haya novedades.');
             header('Location: panel');
             exit;
@@ -113,7 +109,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Vehículos ya guardados del cliente, para completar el formulario con uno de ellos
 $stmt = $pdo->prepare('SELECT * FROM vehiculos WHERE id_cliente = ? ORDER BY id_vehiculo');
 $stmt->execute([(int) $_SESSION['usuario_id']]);
 $vehiculosGuardados = array_map(function (array $fila): array {
@@ -122,49 +117,131 @@ $vehiculosGuardados = array_map(function (array $fila): array {
     ];
 }, $stmt->fetchAll());
 
-// Valores iniciales del formulario de vehículo: lo que se envió, o vacío
 $inicialVehiculo = array_intersect_key($v, array_flip($camposVehiculo));
 $catalogo = catalogo_vehiculos($pdo);
-
 $apiBase = htmlspecialchars($config['api_url'], ENT_QUOTES);
+
 inicio_html('Pedir turno', '<meta name="api-base" content="' . $apiBase . '">');
-mostrar_mensajes('', $errores);
 ?>
+  <div class="encabezado-pagina">
+    <div>
+      <h1>Reservar Turno Online</h1>
+      <p class="subtitulo">Elegí tu vehículo guardado o cargá uno nuevo, indicá el motivo y reservá horario libre al instante.</p>
+    </div>
+    <a href="panel" class="btn btn-outline">← Volver al inicio</a>
+  </div>
 
-<section class="tarjeta">
-    <h1>Pedir turno</h1>
+  <?php mostrar_mensajes('', $errores); ?>
 
-    <form method="post" action="turno_nuevo" id="form-turno" class="formulario" novalidate>
+  <div class="panel-grid">
+    <div class="panel-principal">
+      <form method="post" action="turno_nuevo" id="form-turno" novalidate>
         <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token()) ?>">
 
-        <?php if ($vehiculosGuardados): ?>
-        <label class="campo completo" id="bloque-guardado">Vehículo guardado
-            <select id="vehiculo-guardado">
-                <option value="">Cargar uno nuevo</option>
-            </select>
-            <small>Elegí uno para completar los datos. Podés ajustarlos antes de reservar.</small>
-        </label>
-        <?php endif; ?>
+        <!-- Paso 1: Vehículo -->
+        <section class="tarjeta">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+            <span class="badge badge-activo">Paso 1</span>
+            <h2 style="margin:0;">Datos del vehículo</h2>
+          </div>
 
-        <?php campos_vehiculo($anioMax); ?>
+          <div class="formulario">
+            <?php if ($vehiculosGuardados): ?>
+              <label class="campo completo" id="bloque-guardado">Vehículo guardado en tu cuenta
+                <select id="vehiculo-guardado">
+                  <option value="">Cargar uno nuevo</option>
+                </select>
+                <small>Al elegir uno se completan patente, marca, modelo, año y kilometraje automáticamente.</small>
+              </label>
+            <?php endif; ?>
 
-        <label class="campo completo">
-            Motivo
-            <input type="text" name="motivo" maxlength="255" value="<?= htmlspecialchars($v['motivo']) ?>">
-        </label>
+            <?php campos_vehiculo($anioMax); ?>
+          </div>
+        </section>
 
-        <label class="campo">
-            Fecha
-            <input type="date" name="fecha" id="fecha" min="<?= date('Y-m-d') ?>"
-                   value="<?= htmlspecialchars($v['fecha']) ?>">
-        </label>
+        <!-- Paso 2: Motivo -->
+        <section class="tarjeta">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+            <span class="badge badge-activo">Paso 2</span>
+            <h2 style="margin:0;">¿Qué necesita tu vehículo?</h2>
+          </div>
 
-        <div id="horarios" class="horarios completo"></div>
-        <input type="hidden" name="hora" id="hora" value="<?= htmlspecialchars($v['hora']) ?>">
+          <div class="formulario">
+            <div class="campo completo">
+              <span>Motivo o síntoma principal</span>
+              <input type="text" name="motivo" id="motivo-input" maxlength="255"
+                     placeholder="Ej: Service 10.000 km, vibración al frenar, revisión pre-VTV..."
+                     value="<?= htmlspecialchars($v['motivo']) ?>">
+              <div class="quick-chips" aria-label="Motivos frecuentes">
+                <button type="button" class="quick-chip" data-motivo="Service programado de 10.000 km">Service 10.000 km</button>
+                <button type="button" class="quick-chip" data-motivo="Revisión y cambio de pastillas de freno">Frenos y pastillas</button>
+                <button type="button" class="quick-chip" data-motivo="Revisión general Pre-VTV">Pre-VTV</button>
+                <button type="button" class="quick-chip" data-motivo="Control de tren delantero y amortiguación">Tren delantero</button>
+                <button type="button" class="quick-chip" data-motivo="Diagnóstico computarizado / luz de check engine">Escaneo computarizado</button>
+              </div>
+            </div>
+          </div>
+        </section>
 
-        <button type="submit" class="btn btn-grande">Reservar turno</button>
-    </form>
-</section>
+        <!-- Paso 3: Fecha y Horario -->
+        <section class="tarjeta destacada">
+          <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+            <span class="badge badge-activo">Paso 3</span>
+            <h2 style="margin:0;">Fecha y horario disponible</h2>
+          </div>
+
+          <div class="formulario">
+            <label class="campo">
+              Fecha del turno
+              <input type="date" name="fecha" id="fecha" min="<?= date('Y-m-d') ?>"
+                     value="<?= htmlspecialchars($v['fecha']) ?>">
+            </label>
+
+            <div class="campo completo">
+              <span>Horarios disponibles</span>
+              <div id="horarios" class="horarios">
+                <span class="vacio">Elegí una fecha para consultar los turnos libres.</span>
+              </div>
+              <input type="hidden" name="hora" id="hora" value="<?= htmlspecialchars($v['hora']) ?>">
+            </div>
+
+            <div class="completo" style="margin-top:6px;">
+              <button type="submit" class="btn btn-grande">Confirmar Reserva de Turno</button>
+            </div>
+          </div>
+        </section>
+      </form>
+    </div>
+
+    <!-- Resumen lateral en vivo -->
+    <aside class="panel-lateral" aria-label="Resumen de tu reserva">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <?= icono_svg('calendar') ?>
+        <h2 style="margin:0; font-size:1.05rem;">Resumen de Reserva</h2>
+      </div>
+
+      <div class="meta-tile">
+        <span>Vehículo & Patente</span>
+        <strong id="res-vehiculo">Completá los datos</strong>
+        <div style="margin-top:6px;"><span class="patente-tag" id="res-patente">—</span></div>
+      </div>
+
+      <div class="meta-tile">
+        <span>Motivo seleccionado</span>
+        <strong id="res-motivo" style="font-weight:500;">Sin especificar</strong>
+      </div>
+
+      <div class="meta-tile">
+        <span>Día y horario</span>
+        <strong id="res-fecha-hora" class="mono">Elegí fecha y hora</strong>
+      </div>
+
+      <div style="font-size:0.78rem; color:var(--text-secondary); line-height:1.5; border-top:1px solid var(--border); padding-top:12px;">
+        <strong style="color:#fff; display:block; margin-bottom:4px;">Sin compromiso de reparación</strong>
+        Tu vehículo ingresa a diagnóstico y recibís el presupuesto detallado antes de autorizar cualquier arreglo.
+      </div>
+    </aside>
+  </div>
 
 <script type="application/json" id="catalogo"><?= json_encode($catalogo, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
 <script type="application/json" id="inicial"><?= json_encode($inicialVehiculo, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?></script>
@@ -184,48 +261,64 @@ mostrar_mensajes('', $errores);
         JSON.parse(document.getElementById('inicial').textContent)
     );
 
-    // Vehículos guardados: el selector muestra solo los del tipo elegido
     const guardados = JSON.parse(document.getElementById('guardados').textContent);
-    const bloqueGuardado = document.getElementById('bloque-guardado');
     const selectorGuardado = document.getElementById('vehiculo-guardado');
-    const tipoElegido = () => form.querySelector('input[name="tipo"]:checked').value;
 
-    function llenarSelector() {
-        if (!selectorGuardado) {
-            return;
-        }
-        const opciones = guardados
-            .map((v, indice) => ({ v, indice }))
-            .filter(({ v }) => v.tipo === tipoElegido());
-        selectorGuardado.innerHTML = '';
-        const vacia = document.createElement('option');
-        vacia.value = '';
-        vacia.textContent = 'Cargar uno nuevo';
-        selectorGuardado.appendChild(vacia);
-        opciones.forEach(({ v, indice }) => {
-            const op = document.createElement('option');
-            op.value = String(indice);
-            op.textContent = v.modelo + ' · ' + v.patente;
-            selectorGuardado.appendChild(op);
-        });
-        bloqueGuardado.hidden = opciones.length === 0;
+    function actualizarResumen() {
+        const pat = (form.querySelector('[name="patente"]').value || '').trim().toUpperCase();
+        const marcaSel = form.querySelector('[name="marca_id"]');
+        const modeloSel = form.querySelector('[name="modelo_id"]');
+        const marcaOtra = (form.querySelector('[name="marca_otra"]')?.value || '').trim();
+        const modeloOtro = (form.querySelector('[name="modelo_otro"]')?.value || '').trim();
+        const motivo = (document.getElementById('motivo-input').value || '').trim();
+
+        const marcaTxt = marcaSel.value === 'otra'
+            ? marcaOtra
+            : (marcaSel.selectedOptions[0]?.value ? marcaSel.selectedOptions[0].textContent : '');
+        const modeloTxt = (marcaSel.value === 'otra' || modeloSel.value === 'otro')
+            ? modeloOtro
+            : (modeloSel.selectedOptions[0]?.value ? modeloSel.selectedOptions[0].textContent : '');
+
+        document.getElementById('res-vehiculo').textContent = (marcaTxt + ' ' + modeloTxt).trim() || 'Completá los datos';
+        document.getElementById('res-patente').textContent = pat || 'SIN PATENTE';
+        document.getElementById('res-motivo').textContent = motivo || 'Sin especificar';
+        document.getElementById('res-fecha-hora').textContent = (fecha.value || 'Sin fecha') + (hora.value ? ' · ' + hora.value + ' hs' : '');
     }
 
-    if (selectorGuardado) {
-        form.querySelectorAll('input[name="tipo"]').forEach((radio) => {
-            radio.addEventListener('change', llenarSelector);
+    if (selectorGuardado && guardados.length > 0) {
+        guardados.forEach((v, indice) => {
+            const o = document.createElement('option');
+            o.value = indice;
+            o.textContent = `${v.modelo} (${v.patente})`;
+            selectorGuardado.appendChild(o);
         });
         selectorGuardado.addEventListener('change', () => {
             if (selectorGuardado.value !== '') {
                 vehiculo.aplicar(guardados[Number(selectorGuardado.value)]);
+                actualizarResumen();
             }
         });
     }
 
+    // Quick chips de motivo
+    document.querySelectorAll('.quick-chip').forEach((chip) => {
+        chip.addEventListener('click', () => {
+            document.getElementById('motivo-input').value = chip.dataset.motivo || '';
+            document.querySelectorAll('.quick-chip').forEach((c) => c.classList.remove('activo'));
+            chip.classList.add('activo');
+            actualizarResumen();
+        });
+    });
+
+    form.addEventListener('input', actualizarResumen);
+    form.addEventListener('change', actualizarResumen);
+
     async function cargarHorarios(horaElegida = '') {
         hora.value = horaElegida;
         contenedor.innerHTML = '';
+        actualizarResumen();
         if (!fecha.value) {
+            contenedor.innerHTML = '<span class="vacio">Elegí una fecha para consultar los turnos libres.</span>';
             return;
         }
         try {
@@ -235,33 +328,32 @@ mostrar_mensajes('', $errores);
                 throw new Error(datos.error || 'Error');
             }
             if (datos.horarios_libres.length === 0) {
-                contenedor.textContent = 'No hay horarios libres ese día.';
+                contenedor.innerHTML = '<span class="vacio">No hay horarios libres ese día. Probá otra fecha.</span>';
                 return;
             }
             datos.horarios_libres.forEach((h) => {
                 const boton = document.createElement('button');
                 boton.type = 'button';
                 boton.className = 'chip' + (h === horaElegida ? ' seleccionado' : '');
-                boton.textContent = h;
+                boton.textContent = h + ' hs';
                 boton.addEventListener('click', () => {
                     contenedor.querySelectorAll('.chip').forEach((c) => c.classList.remove('seleccionado'));
                     boton.classList.add('seleccionado');
                     hora.value = h;
+                    actualizarResumen();
                 });
                 contenedor.appendChild(boton);
             });
         } catch (e) {
-            contenedor.textContent = 'No pudimos cargar los horarios. Probá de nuevo.';
+            contenedor.innerHTML = '<span class="vacio">No pudimos cargar los horarios. Probá de nuevo.</span>';
         }
     }
 
     fecha.addEventListener('change', () => cargarHorarios(''));
-
-    llenarSelector();
+    actualizarResumen();
     if (fecha.value) {
         cargarHorarios(hora.value);
     }
 })();
 </script>
-
 <?php fin_html(); ?>

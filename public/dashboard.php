@@ -4,13 +4,11 @@ require __DIR__ . '/../src/config/database.php';
 require __DIR__ . '/../src/auth/acceso.php';
 require __DIR__ . '/../src/views/layout.php';
 
-// Solo el administrador ve el dashboard
 requerir_rol('admin');
 
 $config = require __DIR__ . '/../config/config.php';
 $pdo = conectar();
 
-// Lista de trabajos. $condicion es una constante interna, nunca viene del usuario
 function listarTrabajos(PDO $pdo, string $condicion): array
 {
     return $pdo->query(
@@ -33,7 +31,6 @@ $realizados = listarTrabajos($pdo, "t.estado = 'listo'");
 $activos = listarTrabajos($pdo, "t.estado NOT IN ('listo', 'rechazado')");
 $stock = $pdo->query("SELECT nombre, stock, stock_minimo, precio FROM repuestos ORDER BY stock ASC")->fetchAll();
 
-// Cobrado: pagos aprobados (Mercado Pago y taller). Pendiente: aprobados sin ningún pago aprobado
 $cobrado = $pdo->query("SELECT COALESCE(SUM(monto), 0) FROM pagos WHERE estado = 'aprobado'")->fetchColumn();
 $cobradoEnTaller = $pdo->query(
     "SELECT COALESCE(SUM(monto), 0) FROM pagos WHERE estado = 'aprobado' AND metodo <> 'mercadopago'"
@@ -45,7 +42,6 @@ $pendienteCobro = $pdo->query(
 )->fetchColumn();
 $stockBajo = count(array_filter($stock, fn($r) => (int) $r['stock'] <= (int) ($r['stock_minimo'] ?? 4)));
 
-// Tabla de trabajos (se usa para activos y realizados)
 function tablaTrabajos(array $filas): void
 {
     if (empty($filas)) {
@@ -59,7 +55,7 @@ function tablaTrabajos(array $filas): void
         echo '<td class="mono">#' . (int) $f['id_trabajo'] . '</td>';
         echo '<td>' . badge_estado($f['estado']) . '</td>';
         echo '<td>' . htmlspecialchars($f['diagnostico'] ?? '—') . '</td>';
-        echo '<td><strong>' . htmlspecialchars($f['modelo']) . '</strong><br><span class="patente-tag" style="margin-top:4px;">' . htmlspecialchars($f['patente']) . '</span></td>';
+        echo '<td><strong>' . htmlspecialchars($f['modelo']) . '</strong><br><span class="patente-placa" style="margin-top:4px; font-size:0.74rem; padding:2px 7px;">' . htmlspecialchars($f['patente']) . '</span></td>';
         echo '<td>' . htmlspecialchars($f['dueno']) . '</td>';
         echo '<td>' . htmlspecialchars($f['mecanico'] ?? 'Sin asignar') . '</td>';
         echo '<td class="num"><strong>' . ($f['precio'] !== null ? '$ ' . number_format($f['precio'], 2, ',', '.') : '—') . '</strong></td>';
@@ -68,17 +64,16 @@ function tablaTrabajos(array $filas): void
     echo '</table></div>';
 }
 
-// Metas que necesita el script: token de la sesión y URL de la API
 $extraHead = '<meta name="api-token" content="' . htmlspecialchars($_SESSION['api_token'] ?? '') . '">'
     . '<meta name="api-base" content="' . htmlspecialchars($config['api_url']) . '">';
 inicio_html('Dashboard', $extraHead);
 ?>
   <div class="encabezado-pagina">
     <div>
-      <h1>Dashboard del taller</h1>
+      <h1>Dashboard del Taller</h1>
       <p class="subtitulo">Resumen financiero, trabajos en curso, stock crítico e insights de la API.</p>
     </div>
-    <a href="stock" class="btn btn-outline">Gestionar stock y proveedores</a>
+    <a href="stock" class="btn btn-outline"><?= icono_svg('box') ?><span>Gestionar stock y proveedores</span></a>
   </div>
 
   <div class="stats">
@@ -87,12 +82,12 @@ inicio_html('Dashboard', $extraHead);
       <div class="valor">$ <?= number_format($cobrado, 2, ',', '.') ?></div>
       <div class="detalle">En el taller: $ <?= number_format($cobradoEnTaller, 2, ',', '.') ?></div>
     </div>
-    <div class="stat" style="border-top-color: var(--warn);">
+    <div class="stat" style="border-top-color: var(--amber);">
       <div class="etiqueta">Pendiente de cobro</div>
       <div class="valor">$ <?= number_format($pendienteCobro, 2, ',', '.') ?></div>
       <div class="detalle">Presupuestos aprobados por cobrar</div>
     </div>
-    <div class="stat" style="border-top-color: var(--info);">
+    <div class="stat" style="border-top-color: var(--sky);">
       <div class="etiqueta">Trabajos activos</div>
       <div class="valor"><?= count($activos) ?></div>
       <div class="detalle">En recepción, diagnóstico o reparación</div>
@@ -100,7 +95,7 @@ inicio_html('Dashboard', $extraHead);
     <div class="stat" style="border-top-color: var(--accent);">
       <div class="etiqueta">Trabajos realizados</div>
       <div class="valor"><?= count($realizados) ?></div>
-      <div class="detalle">Finalizados y listos para entrega</div>
+      <div class="detalle">Finalizados y entregados</div>
     </div>
     <div class="stat" style="border-top-color: <?= $stockBajo > 0 ? 'var(--error)' : 'var(--ok)' ?>;">
       <div class="etiqueta">Stock bajo</div>
@@ -124,7 +119,7 @@ inicio_html('Dashboard', $extraHead);
           <?php foreach ($stock as $r): ?>
             <?php $bajo = (int) $r['stock'] <= (int) ($r['stock_minimo'] ?? 4); ?>
             <tr>
-              <td><?= htmlspecialchars($r['nombre']) ?></td>
+              <td><strong><?= htmlspecialchars($r['nombre']) ?></strong></td>
               <td class="num"><?= (int) $r['stock'] ?></td>
               <td class="num">$ <?= number_format($r['precio'], 2, ',', '.') ?></td>
               <td><?= $bajo ? '<span class="badge badge-rechazado">Bajo</span>' : '<span class="badge badge-cerrado">OK</span>' ?></td>
@@ -135,7 +130,10 @@ inicio_html('Dashboard', $extraHead);
     </div>
 
     <aside class="panel-lateral" aria-label="Insights">
-      <h2 style="margin:0 0 8px; font-size:1.05rem;">Insights del taller</h2>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <?= icono_svg('chart') ?>
+        <h2 style="margin:0; font-size:1.05rem;">Insights del taller</h2>
+      </div>
       <div id="insights" class="vacio">Cargando resumen desde la API...</div>
     </aside>
   </div>
@@ -147,7 +145,7 @@ inicio_html('Dashboard', $extraHead);
 
     function barra(valor, maximo) {
       const pista = document.createElement('div');
-      pista.style.cssText = 'background:#0e1217; border:1px solid #262e38; height:10px; border-radius:999px; overflow:hidden; margin:6px 0 14px';
+      pista.style.cssText = 'background:#0d0f13; border:1px solid #262b35; height:10px; border-radius:999px; overflow:hidden; margin:6px 0 14px';
       const relleno = document.createElement('div');
       relleno.style.cssText = 'background:#ea580c; height:100%; border-radius:999px; width:' + (valor / maximo * 100) + '%';
       pista.appendChild(relleno);
@@ -180,7 +178,7 @@ inicio_html('Dashboard', $extraHead);
         const max = Math.max(1, ...datos.facturacion_mensual.map((f) => f.total));
         datos.facturacion_mensual.forEach((f) => {
           const fila = document.createElement('div');
-          fila.style.cssText = 'display:flex; justify-content:space-between; font-size:0.84rem; color:#f3f4f6;';
+          fila.style.cssText = 'display:flex; justify-content:space-between; font-size:0.84rem; color:#f9fafb;';
           const izq = document.createElement('span');
           izq.textContent = f.mes;
           const der = document.createElement('strong');
@@ -200,7 +198,7 @@ inicio_html('Dashboard', $extraHead);
         const maxTrabajos = Math.max(1, ...datos.trabajos_por_mecanico.map((m) => m.trabajos));
         datos.trabajos_por_mecanico.forEach((m) => {
           const fila = document.createElement('div');
-          fila.style.cssText = 'display:flex; justify-content:space-between; font-size:0.84rem; color:#f3f4f6;';
+          fila.style.cssText = 'display:flex; justify-content:space-between; font-size:0.84rem; color:#f9fafb;';
           const izq = document.createElement('span');
           izq.textContent = m.nombre;
           const der = document.createElement('strong');
